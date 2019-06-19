@@ -60,6 +60,7 @@ using namespace std;
 #include "DataFormats/ForwardDetId/interface/HGCScintillatorDetId.h"
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
 
+#include "DataFormats/HGCRecHit/interface/HGCRecHitCollections.h"
 #include "DataFormats/HGCDigi/interface/HGCDigiCollections.h"
 #include "SimDataFormats/CaloHit/interface/PCaloHitContainer.h"
 #include "SimDataFormats/CaloTest/interface/HGCalTestNumbering.h"
@@ -113,22 +114,24 @@ private:
 
   void analyzeDigi(edm::Handle<HGCalDigiCollection> digiNose, const math::XYZTLorentzVector & initialP4, const HGCalGeometry* geom);
 
-  double analyzeHits(const std::vector<PCaloHit>&, const HFRecHitCollection&, const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal, bool );
+  double analyzeHits(const std::vector<PCaloHit>&, const HGCRecHitCollection & recHitNose, const HFRecHitCollection& , const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal, bool );
 
   std::vector<const reco::GenJet*> doVBSselection(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<reco::GenJetCollection> genJets);
 
-  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<HGCalDigiCollection> digiNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection & recHitNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
   // ----------member data ---------------------------
   //  void ClearVariables();
 
   bool verbose = false;
+  bool useRecHits = true;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genParticlesTag_;
   edm::EDGetTokenT<reco::GenJetCollection> genJetsTag_;
   edm::EDGetTokenT<edm::PCaloHitContainer> simHitTag_;
   edm::EDGetTokenT<edm::PCaloHitContainer> simHcalTag_;
   edm::EDGetTokenT<HGCalDigiCollection> digiNose_;
+  edm::EDGetTokenT<HGCRecHitCollection> recHitNose_;
   
   edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
 
@@ -194,7 +197,8 @@ private:
 
   TH2F *hJetResponseNoseE;
 
-  double coneSize=0.02;
+  double coneSize=0.1;
+  //  double coneSize=0.02;
   double hadWeight=1.;
   bool doSingle=false;
 
@@ -279,11 +283,10 @@ void GenAnalyzer::analyzeDigi(edm::Handle<HGCalDigiCollection> digiNose, const m
 
   hParticleTime->Fill(timeCl);
 
-
 }
 
 
-double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& hits,  const HFRecHitCollection & hfhits, const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal, bool isNose) {
+double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGCRecHitCollection & recHits, const HFRecHitCollection & hfhits, const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal, bool isNose) {
 
   // HF geometry  http://cds.cern.ch/record/896897/files/note05_016.pdf
   // HF in the eta 2.85 - 4.2 should have 8 cells in r
@@ -348,7 +351,6 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& hits,  const HFRecH
   double keV2MIP = 0.044259;
   double fCPerMIP = 1.25;
 
-
   double dedx1 = 39.500245;
   double dedx2 = 39.756638;
   double dedx3 = 39.756638;
@@ -373,7 +375,9 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& hits,  const HFRecH
   double  Esum8=0.;
 
   if(true)  { 
-    for (auto const& hit : hits) {
+
+    //    for (auto const& hit : simHits) {
+    for (auto const& hit : recHits) {
 
       //      hit.energy() in KeV 
 
@@ -424,15 +428,34 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& hits,  const HFRecH
 	  std::cout << "  time = " << time << std::endl;
 	}
       
-	if(detId.layer()==1) { double e=nMIPs*dedx1*0.001;  Esum1 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==2) { double e=nMIPs*dedx2*0.001;  Esum2 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==3) { double e=nMIPs*dedx3*0.001;  Esum3 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==4) { double e=nMIPs*dedx4*0.001;  Esum4 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==5) { double e=nMIPs*dedx5*0.001;  Esum5 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==6) { double e=nMIPs*dedx6*0.001;  Esum6 += e ; Esum  += e ; EsumE += e ; };
-	if(detId.layer()==7) { double e=nMIPs*dedx7*0.001;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; };
-	if(detId.layer()==8) { double e=nMIPs*dedx8*0.001;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; };
+	//	if(useRecHits) {
+
+	if(useRecHits) {
+	  if(hit.energy()> 0.1) {
+
+	    if(detId.layer()==1) { double e=hit.energy();  Esum1 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==2) { double e=hit.energy();  Esum2 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==3) { double e=hit.energy();  Esum3 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==4) { double e=hit.energy();  Esum4 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==5) { double e=hit.energy();  Esum5 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==6) { double e=hit.energy();  Esum6 += e ; Esum  += e ; EsumE += e ; };
+	    if(detId.layer()==7) { double e=hit.energy();  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; };
+	    if(detId.layer()==8) { double e=hit.energy();  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; };
+	  }
+
+	} else {
+
+	  if(detId.layer()==1) { double e=nMIPs*dedx1*0.001;  Esum1 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==2) { double e=nMIPs*dedx2*0.001;  Esum2 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==3) { double e=nMIPs*dedx3*0.001;  Esum3 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==4) { double e=nMIPs*dedx4*0.001;  Esum4 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==5) { double e=nMIPs*dedx5*0.001;  Esum5 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==6) { double e=nMIPs*dedx6*0.001;  Esum6 += e ; Esum  += e ; EsumE += e ; };
+	  if(detId.layer()==7) { double e=nMIPs*dedx7*0.001;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; };
+	  if(detId.layer()==8) { double e=nMIPs*dedx8*0.001;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; };
 	
+	}
+
 	double radius=sqrt(global.x()*global.x() + global.y()*global.y());
 	
 	hEnergyPosition->Fill(abs(global.z()),radius);
@@ -484,23 +507,24 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& hits,  const HFRecH
 
 }
 
-void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<HGCalDigiCollection> digiNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection& recHitNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
   
   doSingle=true;
 
  for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
     
    // 22 photon, 130 k0L , 211 pi
-   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-   //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+   //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
+   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
    //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
    if (!isPhoton) continue;
 
    //   cout << ">>>>>>> pid,status,px,py,pz,e,eta,phi= "  << genpart->pdgId() << " , " << genpart->status() << " , " << genpart->px() << " , " << genpart->py() << " , " << genpart->pz() << " , " << genpart->energy() << " , ( " << genpart->eta() << " , " << genpart->phi() << ") " << endl;
    
-   double E= analyzeHits(hits, hfhits, genpart->p4(), genpart->energy(), geom, geomHcal, true);
+   // this is DIGI
+   double E = analyzeHits(hits, recHitNose, hfhits, genpart->p4(), genpart->energy(), geom, geomHcal, true);
 
-   analyzeDigi(digiNose, genpart->p4(), geom);
+   //   analyzeDigi(digiNose, genpart->p4(), geom);
    
  }
 
@@ -598,6 +622,8 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
 
   //  digiNose_ = consumes<HGCalDigiCollection>(iConfig.getParameter<edm::InputTag>("simHFNoseUnsuppressedDigis","HFNose"));
   digiNose_ = consumes<HGCalDigiCollection>(iConfig.getUntrackedParameter<edm::InputTag>("DIGITAG",edm::InputTag("simHFNoseUnsuppressedDigis:HFNose")));
+
+  recHitNose_ = consumes<HGCRecHitCollection>(iConfig.getUntrackedParameter<edm::InputTag>("REChitTAG",edm::InputTag("HGCalRecHit:HGCHFNoseRecHits")));
 
   /*
     cout << "---------------------------------------------------" << endl; 
@@ -708,7 +734,11 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   
   edm::Handle<HGCalDigiCollection> digiNose;
   iEvent.getByToken(digiNose_, digiNose);
-  
+
+  edm::Handle<HGCRecHitCollection> recHitNose;
+  iEvent.getByToken(recHitNose_, recHitNose);
+  const HGCRecHitCollection noseHits = *(recHitNose.product());
+
   edm::Handle<reco::GenJetCollection> genJets;
   iEvent.getByToken(genJetsTag_, genJets);
 
@@ -731,7 +761,7 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    cout << "------------------------------------------------" << endl; 
    */   
 
-   if(runSingle) getSingle(genParticles, digiNose, caloHits, Hithf, geom, geoHcal );
+   if(runSingle) getSingle(genParticles, digiNose, noseHits, caloHits, Hithf, geom, geoHcal );
 
    return;
    
@@ -793,19 +823,19 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    bool isNose=true;
 
-   double EMaxNose= analyzeHits(caloHits, Hithf, selectedGenJets.at(indexRapMax)->p4(), selectedGenJets.at(indexRapMax)->energy(), geom, geoHcal, isNose);
-   double EMinNose= analyzeHits(caloHits, Hithf, selectedGenJets.at(indexRapMin)->p4(), selectedGenJets.at(indexRapMin)->energy(), geom, geoHcal, isNose);
+   double EMaxNose= analyzeHits(caloHits, noseHits, Hithf, selectedGenJets.at(indexRapMax)->p4(), selectedGenJets.at(indexRapMax)->energy(), geom, geoHcal, isNose);
+   double EMinNose= analyzeHits(caloHits, noseHits, Hithf, selectedGenJets.at(indexRapMin)->p4(), selectedGenJets.at(indexRapMin)->energy(), geom, geoHcal, isNose);
 
 
    //   cout << "----------------------------------------------  starting HF caloHits -------------------------------------------" << endl;
 
    isNose=false;
 
-   double EMax= analyzeHits(caloHits, Hithf, selectedGenJets.at(indexRapMax)->p4(), selectedGenJets.at(indexRapMax)->energy(), geom, geoHcal, isNose);
+   double EMax= analyzeHits(caloHits, noseHits, Hithf, selectedGenJets.at(indexRapMax)->p4(), selectedGenJets.at(indexRapMax)->energy(), geom, geoHcal, isNose);
    if(EMax>0 and fabs(selectedGenJets.at(indexRapMax)->eta())>3.2 ) hJetResponseHF->Fill(EMax/selectedGenJets.at(indexRapMax)->energy());
    if(EMax>0) hJetResponseHFEta->Fill(selectedGenJets.at(indexRapMax)->eta(), EMax/selectedGenJets.at(indexRapMax)->energy());
    
-   double EMin= analyzeHits(caloHits, Hithf, selectedGenJets.at(indexRapMin)->p4(), selectedGenJets.at(indexRapMin)->energy(), geom, geoHcal, isNose);
+   double EMin= analyzeHits(caloHits, noseHits, Hithf, selectedGenJets.at(indexRapMin)->p4(), selectedGenJets.at(indexRapMin)->energy(), geom, geoHcal, isNose);
    if(EMin>0 and fabs(selectedGenJets.at(indexRapMin)->eta())>3.2 ) hJetResponseHF->Fill(EMin/selectedGenJets.at(indexRapMin)->energy());
    if(EMin>0) hJetResponseHFEta->Fill(selectedGenJets.at(indexRapMin)->eta(),EMin/selectedGenJets.at(indexRapMin)->energy());
 
