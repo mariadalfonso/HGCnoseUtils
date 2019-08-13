@@ -1,6 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
-process = cms.Process("Demo")
+from Configuration.Eras.Era_Phase2C6_cff import Phase2C6
+
+process = cms.Process("Demo",Phase2C6)
 
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.options = cms.untracked.PSet (
@@ -9,14 +11,13 @@ process.options = cms.untracked.PSet (
     numberOfStreams = cms.untracked.uint32(8)
 )
 
-
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
-process.MessageLogger.cerr.FwkReport.reportEvery = 10000
+process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 
 process.load("Geometry.ForwardCommonData.hfnoseXML_cfi")
@@ -30,7 +31,35 @@ process.load("Geometry.ForwardGeometry.HFNoseGeometryESProducer_cfi")
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        'file:/eos/user/d/dalfonso/HGCnose/SinglePtNoSmearing/K0L_Pt3_Eta35_Step3.root'
+
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_1.root',
+#######        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_2.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_3.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_4.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_5.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_6.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_7.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_8.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_9.root',
+        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/quark_dijets/fix/QCD_GEN_SIM_step3_10.root'
+#
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_1.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_2.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_3.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_4.root',
+#######        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_5.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_6.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_7.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_8.root',
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/fix/QCD_GEN_SIM_step3_9.root'
+
+#        'file:/eos/user/m/mbaldwin/HGC_samples/QCD_dijets/gluon_dijets/QCD_GEN_SIM_step3.root'
+
+#        'file:Gamma_E100_Step3.root'
+#        'file:Gluon_E100_Step3.root'
+#        'file:/tmp/dalfonso/QCD_HT200to300.root'
+#        'file:/eos/user/m/mbaldwin/HGC_samples/Gluon_HGC_20Pt/Gluon_Pt20_Step3.root'
+#        'file:/eos/user/d/dalfonso/HGCnose/SinglePtNoSmearing/K0L_Pt3_Eta35_Step3.root'
 #        'file:/eos/user/d/dalfonso/HGCnose/SinglePtNoSmearing/Gamma_Pt3_Eta35_Step3.root'
 
 #        'file:/eos/user/d/dalfonso/HGCnose/SinglePt/K0L_Pt5_Eta35_Step3.root'
@@ -65,6 +94,8 @@ process.comparisonPlots = cms.EDAnalyzer("GenAnalyzer")
 #process.TFileService = cms.Service('TFileService', fileName = cms.string('RESOLUTION/test_Pion_HF_E60.root') )
 #process.TFileService = cms.Service('TFileService', fileName = cms.string('RESOLUTION/test_Pion_Nose_E10.root') )
 #process.TFileService = cms.Service('TFileService', fileName = cms.string('TIME2/test_gamma_Pt3.root') )  
-process.TFileService = cms.Service('TFileService', fileName = cms.string('TIME2/test_K0L_Pt3.root') )  
+#process.TFileService = cms.Service('TFileService', fileName = cms.string('TIME2/test_K0L_Pt3.root') )
+#process.TFileService = cms.Service('TFileService', fileName = cms.string('test_Gluon.root'))
+process.TFileService = cms.Service('TFileService', fileName = cms.string('test_Quark.root'))
 
 process.p = cms.Path(process.comparisonPlots)
