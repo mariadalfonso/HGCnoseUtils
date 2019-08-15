@@ -126,7 +126,6 @@ private:
   //  void ClearVariables();
 
   bool verbose = false;
-  bool useRecHits = true;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genParticlesTag_;
   edm::EDGetTokenT<reco::GenJetCollection> genJetsTag_;
@@ -197,14 +196,14 @@ private:
   TH1F *hJetResponseNoseEE;
   TH1F *hJetResponseNoseEH;
 
+  TH2F *hJetResponseE;
   TH2F *hJetResponseEta;
+
   TH2F *hJetResponseHFEta;
   TH2F *hJetResponseNoseEta;
 
-  TH2F *hJetResponseNoseE;
-
-  //  double coneSize=0.1;
-  double coneSize=0.4; // good for jets
+  double coneSize=0.1;
+  //  double coneSize=0.4; // good for jets
   double hadWeight=1.;
   bool doSingle=false;
 
@@ -365,6 +364,9 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
   }
 
+  double thicknessCorrection = 0.759;
+  // old v8 thicknessCorrection = 1.132
+  // https://github.com/cms-sw/cmssw/blob/71bcdf3775b9bbc8911257bfc67fce073b44a0b0/RecoLocalCalo/HGCalRecProducers/python/HGCalRecHit_cfi.py#L233;
 
   double EnergySumNOSE = 0.;
 
@@ -390,7 +392,7 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
     for (auto const& hit : recHits) {
 
       double energy      = hit.energy();
-      double nMIPs = (hit.energy()/numberOfMIPin1GeV)*1.4;
+      double nMIPs = (hit.energy()/numberOfMIPin1GeV);
       //      double nMIPs = hit.energy()/numberOfMIPin1GeV;
       double time        = hit.time();
       uint32_t id        = hit.id();
@@ -433,8 +435,6 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 	  std::cout << "  time = " << time << std::endl;
 	}
       
-	//	if(useRecHits) {
-
 	double theta = 2 * atan(exp(-global.eta()));
 	double phi = global.phi();
 	double px = sin(theta)*cos(phi);
@@ -442,31 +442,25 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 	double pz = cos(theta);
 	TLorentzVector constituentbase(px,py,pz,1);
 
-	if(useRecHits) {
-	  //	  if(hit.energy()> 0.1) {
+	if(detId.layer()==1) { double e=hit.energy()/thicknessCorrection;  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==2) { double e=hit.energy()/thicknessCorrection;  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==3) { double e=hit.energy()/thicknessCorrection;  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==4) { double e=hit.energy()/thicknessCorrection;  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==5) { double e=hit.energy()/thicknessCorrection;  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==6) { double e=hit.energy()/thicknessCorrection;  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==7) { double e=hit.energy()/thicknessCorrection;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==8) { double e=hit.energy()/thicknessCorrection;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
 
-	  if(detId.layer()==1) { double e=hit.energy();  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==2) { double e=hit.energy();  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==3) { double e=hit.energy();  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==4) { double e=hit.energy();  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==5) { double e=hit.energy();  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==6) { double e=hit.energy();  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==7) { double e=hit.energy();  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	  if(detId.layer()==8) { double e=hit.energy();  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= hit.energy()*constituentbase; };
-	    //	  }
-
-	} else {
-
-	  if(detId.layer()==1) { double e=nMIPs*dedx1*0.001;  Esum1 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==2) { double e=nMIPs*dedx2*0.001;  Esum2 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==3) { double e=nMIPs*dedx3*0.001;  Esum3 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==4) { double e=nMIPs*dedx4*0.001;  Esum4 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==5) { double e=nMIPs*dedx5*0.001;  Esum5 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==6) { double e=nMIPs*dedx6*0.001;  Esum6 += e ; Esum  += e ; EsumE += e ; };
-	  if(detId.layer()==7) { double e=nMIPs*dedx7*0.001;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; };
-	  if(detId.layer()==8) { double e=nMIPs*dedx8*0.001;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; };
-	
-	}
+	/* below for simHits
+	if(detId.layer()==1) { double e=nMIPs*dedx1*0.001/thicknessCorrection;  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==2) { double e=nMIPs*dedx2*0.001/thicknessCorrection;  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==3) { double e=nMIPs*dedx3*0.001/thicknessCorrection;  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==4) { double e=nMIPs*dedx4*0.001/thicknessCorrection;  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==5) { double e=nMIPs*dedx5*0.001/thicknessCorrection;  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==6) { double e=nMIPs*dedx6*0.001/thicknessCorrection;  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==7) { double e=nMIPs*dedx7*0.001/thicknessCorrection;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==8) { double e=nMIPs*dedx8*0.001/thicknessCorrection;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	*/
 
 	double radius=sqrt(global.x()*global.x() + global.y()*global.y());
 	
@@ -514,7 +508,7 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
 
   // VECTOR SUM
-  hJetResponseNoseE->Fill(trueE, (EsumVectorNose+EsumVectorHF).Energy()/trueE);
+  hJetResponseE->Fill(trueE, (EsumVectorNose+EsumVectorHF).Energy()/trueE);
   hJetResponseEta->Fill(initialP4.eta(), (EsumVectorNose+EsumVectorHF).Energy()/trueE);
   hJetResponse->Fill((EsumVectorNose+EsumVectorHF).Energy()/trueE);
 
@@ -698,8 +692,9 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   hRecHitPosition = FileService->make<TH2F>("hRecHitPosition","hRecHitPosition", 82, -41., 41., 73 , 0., 73.);
 
   hEnergyPosition = FileService->make<TH2F>("hEnergyPosition","hEnergyPosition", 600, 1040., 1200., 500, 0., 150.);
-  hEnergyEtaPhi = FileService->make<TH2F>("hEnergyEtaPhi","hEnergyEtaPhi", 100, -5., 5., 628, -3.14, 3.14);
-  hEnergyEtaPhiHF = FileService->make<TH2F>("hEnergyEtaPhiHF","hEnergyEtaPhiHF", 100, -5., 5., 100, -3.14, 3.14);
+  hEnergyEtaPhi = FileService->make<TH2F>("hEnergyEtaPhi","hEnergyEtaPhi", 100, -5., 5., 18*2, -3.14, 3.14);
+  // modularity of the HF is 18 tile in phi
+  hEnergyEtaPhiHF = FileService->make<TH2F>("hEnergyEtaPhiHF","hEnergyEtaPhiHF", 100, -5., 5., 628, -3.14, 3.14);
   hNmips = FileService->make<TH1F>("hNmips","hNmips", 100, 0. , 5000.);
   hEnergyMIPS = FileService->make<TH1F>("hEnergyMIPS","hEnergyMIPS", 100, 0. , 0.0001);
 
@@ -725,7 +720,7 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   hJetResponseHFEta = FileService->make<TH2F>("hJetResponseHFEta","hJetResponseHFEta", 100., -5., 5., 100, 0. , 2.);
   hJetResponseNoseEta = FileService->make<TH2F>("hJetResponseNoseEta","hJetResponseNoseEta", 100., -5., 5., 100, 0. , 2.);
 
-  hJetResponseNoseE = FileService->make<TH2F>("hJetResponseNoseE","hJetResponseNoseE", 1000., 0, 1000., 100, 0. , 2.);
+  hJetResponseE = FileService->make<TH2F>("hJetResponseE","hJetResponseE", 1000., 0, 1000., 100, 0. , 2.);
 
 }
 
