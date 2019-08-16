@@ -8,6 +8,11 @@
 <use name="SimCalorimetry/HcalSimAlgos"/>
 <use name="SimCalorimetry/CaloSimAlgos"/>
 
+
+<use   name="L1Trigger/L1THGCal"/>
+<use   name="L1Trigger/L1THGCalUtilities"/>
+<use   name="DataFormats/L1THGCal"/>
+
 <use name="Geometry/CaloGeometry"/>
 <use name="DataFormats/ForwardDetId"/>
 <use name="Geometry/HGCalGeometry"/>
