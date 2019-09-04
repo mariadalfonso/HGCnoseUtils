@@ -211,15 +211,25 @@ private:
 
   */
 
+  TH2F *hClusterLayerRho;
   TH2F *hClusterEtaPhi;
   TH1F *hClusterEnergy;
   TH1F *hClusterLayer;
+
 
   TH1F *hJetResponse;
   TH2F *hJetResponseE;
   TH2F *hJetResponseEta;
 
-  double coneSize=0.1;
+  TH1F * hClSigmaEtaEtaTot;
+  TH1F * hClSigmaEtaEtaMax;
+  TH1F * hClSigmaPhiPhiTot;
+  TH1F * hClSigmaPhiPhiMax;
+  TH1F * hClSigmaRRTot;
+  TH1F * hClSigmaRRMax;
+  TH1F * hClZZ;
+
+  double coneSize=0.4;
   //  double coneSize=0.4; // good for jets
   double hadWeight=1.;
   bool doSingle=false;
@@ -245,6 +255,7 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
   TLorentzVector EsumVectorL1HF(0.,0.,0.,0.);
 
   for (auto const& cl : L12dNose) {
+  //  for (auto const& cl : L13dNose) {
 
     double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
 
@@ -256,7 +267,22 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
 
     hClusterEnergy->Fill(cl.energy());
     hClusterEtaPhi->Fill(cl.eta(),cl.phi());
-    hClusterLayer->Fill(triggerTools_.layerWithOffset(cl.detId()));
+    unsigned layer = triggerTools_.layerWithOffset(cl.detId());
+    hClusterLayer->Fill(layer);
+
+    hClSigmaEtaEtaTot->Fill(cl.sigmaEtaEtaTot());
+    hClSigmaEtaEtaMax->Fill(cl.sigmaEtaEtaMax());
+    hClSigmaPhiPhiTot->Fill(cl.sigmaPhiPhiTot());
+    hClSigmaPhiPhiMax->Fill(cl.sigmaEtaEtaMax());
+    hClSigmaRRTot->Fill(cl.sigmaRRTot());
+    hClSigmaRRMax->Fill(cl.sigmaRRMax());
+    hClZZ->Fill(cl.sigmaZZ());
+
+    /*
+    GlobalPoint global= triggerTools_.getTCPosition(cl.detId());
+    double rho = sqrt(global.x()*global.x()+global.y()*global.y());
+    hClusterLayerRho->Fill(layer,rho);
+    */
 
     double theta = 2 * atan(exp(cl.eta()));
     double phi = cl.phi();
@@ -284,20 +310,20 @@ void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles
   doSingle=true;
 
   for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
-
-   // 22 photon, 130 k0L , 211 pi
-   //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
+    
+    // 22 photon, 130 k0L , 211 pi
+    //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
     bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
-   //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
+    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
     if (!isPhoton) continue;
-
-   /*
-   bool isGluon = ( genpart->status()==23 and abs(genpart->pdgId())==21 and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
-   if (!isGluon) continue;
-   bool isQuark = ( genpart->status()==23 and (abs(genpart->pdgId())==1 or abs(genpart->pdgId())==2 or abs(genpart->pdgId())==3) and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
-   if (!isQuark) continue;
-   */
-
+    
+    /*
+      bool isGluon = ( genpart->status()==23 and abs(genpart->pdgId())==21 and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
+      if (!isGluon) continue;
+      bool isQuark = ( genpart->status()==23 and (abs(genpart->pdgId())==1 or abs(genpart->pdgId())==2 or abs(genpart->pdgId())==3) and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
+      if (!isQuark) continue;
+    */
+    
     //   cout << ">>>>>>> pid,status,px,py,pz,e,eta,phi= "  << genpart->pdgId() << " , " << genpart->status() << " , " << genpart->px() << " , " << genpart->py() << " , " << genpart->pz() << " , " << genpart->energy() << " , ( " << genpart->eta() << " , " << genpart->phi() << ") " << endl;
 
    hGenParticleEta->Fill(abs(genpart->eta()));
@@ -325,8 +351,6 @@ L1Analyzer::L1Analyzer(const edm::ParameterSet& iConfig)
   clusters_token_ = consumes<l1t::HGCalClusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Clusters", edm::InputTag("hgcalBackEndLayer1Producer:HGCalBackendLayer1Processor2DClustering")));
   multiclusters_token_ = consumes<l1t::HGCalMulticlusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Multiclusters", edm::InputTag("hgcalBackEndLayer2Producer:HGCalBackendLayer2Processor3DClustering")));
 
-
-
   /*                                                                                                                                                                                 
 Type                                  Module                      Label             Process
 ----------------------------------------------------------------------------------------------                                                                                       
@@ -334,9 +358,7 @@ Type                                  Module                      Label         
   BXVector<l1t::HGCalMulticluster>      "hgcalBackEndLayer2Producer"   "HGCalBackendLayer2Processor3DClustering"   "DIGI"
   BXVector<l1t::HGCalTower>             "hgcalTowerProducer"        "HGCalTowerProcessor"   "DIGI"
 
-
   edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >    "HGCalRecHit"               "HGCHFNoseRecHits"   "RECO"
-
   */
 
 
@@ -368,8 +390,17 @@ Type                                  Module                      Label         
   hClusterEtaPhi = FileService->make<TH2F>("hClusterEtaPhi","hClusterEtaPhi", 100, -5., 5., 628, -3.14, 3.14);
   hClusterEnergy = FileService->make<TH1F>("hClusterEnergy","hClusterEnergy", 100, 0. , 100.);
   hClusterLayer = FileService->make<TH1F>("hClusterLayer","hClusterLayer", 10, 0. , 10.);
+  hClusterLayerRho = FileService->make<TH2F>("hClusterLayerRho","hClusterLayerRho", 10, 0. , 10., 150, 0, 150);
 
-  hJetResponse = FileService->make<TH1F>("hJetResponse","hJetResponse", 100, 0. , 2.);
+  hJetResponse = FileService->make<TH1F>("hClusterResponse","hClusterResponse", 100, 0. , 2.);
+
+  hClSigmaEtaEtaTot = FileService->make<TH1F>("hClSigmaEtaEtaTot","hClSigmaEtaEtaTot", 100, 0. , 0.05);
+  hClSigmaEtaEtaMax = FileService->make<TH1F>("hClSigmaEtaEtaMax","hClSigmaiEtaiEtaMax", 100, 0. , 0.05);
+  hClSigmaPhiPhiTot = FileService->make<TH1F>("hClSigmaPhiPhiTot","hClSigmaEtaEtaTot", 100, 0. , 0.05);
+  hClSigmaPhiPhiMax = FileService->make<TH1F>("hClSigmaPhiPhiMax","hClSigmaPhiPhiMax", 100, 0. , 0.05);
+  hClSigmaRRTot = FileService->make<TH1F>("hClSigmaRRTot","hClSigmaRRTot", 100, 0. , 0.005);
+  hClSigmaRRMax = FileService->make<TH1F>("hClSigmaRRMax","hClSigmaRRMax", 100, 0. , 0.005);
+  hClZZ = FileService->make<TH1F>("hClSigmaZZ","hClSigmaZZ", 100, 0. , 12.5);
 
 }
 
