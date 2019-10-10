@@ -193,8 +193,6 @@ private:
   TH1F *hEnergy8;
   TH1F *hEnergyHF;
 
-  TH2F *hRecHitPosition;
-
   TH2F *hEnergyPosition;
   TH2F *hEnergyEtaPhi;
 
@@ -208,18 +206,20 @@ private:
 
   TH2F *hJetResponseHFEta;
   TH2F *hJetResponseNoseEta;
-
   */
 
   TH2F *hClusterLayerRho;
   TH2F *hClusterEtaPhi;
   TH1F *hClusterEnergy;
   TH1F *hClusterLayer;
+  TH1F *hCluster3DSize;
+  TH2F *hRecHitPositionNull;
 
+  TH1F *hMaxClResponse;
 
-  TH1F *hJetResponse;
-  TH2F *hJetResponseE;
-  TH2F *hJetResponseEta;
+  TH1F *hResponse;
+  TH2F *hResponseE;
+  TH2F *hResponseEta;
 
   TH1F * hClSigmaEtaEtaTot;
   TH1F * hClSigmaEtaEtaMax;
@@ -253,9 +253,11 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
 
   TLorentzVector EsumVectorL1Nose(0.,0.,0.,0.);
   TLorentzVector EsumVectorL1HF(0.,0.,0.,0.);
+  
+  double maxECLuster = 0;
 
-  for (auto const& cl : L12dNose) {
-  //  for (auto const& cl : L13dNose) {
+  //  for (auto const& cl : L12dNose) {
+  for (auto const& cl : L13dNose) {
 
     double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
 
@@ -265,43 +267,55 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
 
       //      cout << " layerWithOffset " << triggerTools_.layerWithOffset(cl.detId()) << endl;
 
-    hClusterEnergy->Fill(cl.energy());
-    hClusterEtaPhi->Fill(cl.eta(),cl.phi());
-    unsigned layer = triggerTools_.layerWithOffset(cl.detId());
-    hClusterLayer->Fill(layer);
+      if(cl.energy()>maxECLuster) maxECLuster=cl.energy();
 
-    hClSigmaEtaEtaTot->Fill(cl.sigmaEtaEtaTot());
-    hClSigmaEtaEtaMax->Fill(cl.sigmaEtaEtaMax());
-    hClSigmaPhiPhiTot->Fill(cl.sigmaPhiPhiTot());
-    hClSigmaPhiPhiMax->Fill(cl.sigmaEtaEtaMax());
-    hClSigmaRRTot->Fill(cl.sigmaRRTot());
-    hClSigmaRRMax->Fill(cl.sigmaRRMax());
-    hClZZ->Fill(cl.sigmaZZ());
+      hClusterEnergy->Fill(cl.energy());
+      hClusterEtaPhi->Fill(cl.eta(),cl.phi());
 
-    /*
-    GlobalPoint global= triggerTools_.getTCPosition(cl.detId());
-    double rho = sqrt(global.x()*global.x()+global.y()*global.y());
-    hClusterLayerRho->Fill(layer,rho);
-    */
+      //      if(cl.energy() > 5 ) {
+	//      unsigned layer = 9999.;
+      unsigned layer = triggerTools_.layerWithOffset(cl.detId());
+      hClusterLayer->Fill(layer);
+      hCluster3DSize->Fill(cl.constituents().size());
 
-    double theta = 2 * atan(exp(cl.eta()));
-    double phi = cl.phi();
-    double px = sin(theta)*cos(phi);
-    double py = sin(theta)*sin(phi);
-    double pz = cos(theta);
-    TLorentzVector constituentbase(px,py,pz,1);
-    EsumVectorL1Nose += cl.energy()*constituentbase;
+      //	cout << " constituents " << cl.constituents().size() << " layer = " << layer << " eta = " << cl.eta() << " phi = " << cl.phi() << " cl.energy() = " << cl.energy() << " trueEnergy = " << initialP4.energy() << endl;
+      //      }
 
+      hClSigmaEtaEtaTot->Fill(cl.sigmaEtaEtaTot());
+      hClSigmaEtaEtaMax->Fill(cl.sigmaEtaEtaMax());
+      hClSigmaPhiPhiTot->Fill(cl.sigmaPhiPhiTot());
+      hClSigmaPhiPhiMax->Fill(cl.sigmaEtaEtaMax());
+      hClSigmaRRTot->Fill(cl.sigmaRRTot());
+      hClSigmaRRMax->Fill(cl.sigmaRRMax());
+      hClZZ->Fill(cl.sigmaZZ());
+
+      //      GlobalPoint global= triggerTools_.getTCPosition(DetId(cl.detId()));
+      //      cout << " global.x()=" << global.x() << " global.y()=" << global.y()  << endl;
+      //      double rho = sqrt(global.x()*global.x()+global.y()*global.y());
+      //      hClusterLayerRho->Fill(layer,rho);
+      
+      double theta = 2 * atan(exp(cl.eta()));
+      double phi = cl.phi();
+      double px = sin(theta)*cos(phi);
+      double py = sin(theta)*sin(phi);
+      double pz = cos(theta);
+      TLorentzVector constituentbase(px,py,pz,1);
+      EsumVectorL1Nose += cl.energy()*constituentbase;
+      
     }
-    //    cout << cluster.energy() << endl;
 
   }
-
+  
   /*
-  hJetResponseE->Fill(trueE, (EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
-  hJetResponseEta->Fill(initialP4.eta(), (EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+    hResponseE->Fill(trueE, (EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+    hResponseEta->Fill(initialP4.eta(), (EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
   */
-  hJetResponse->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+
+
+  hMaxClResponse->Fill(maxECLuster/trueE);
+  hResponse->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+
+  if(maxECLuster/trueE<0.01) hRecHitPositionNull->Fill(initialP4.eta(),initialP4.phi());
 
 }
 
@@ -312,9 +326,9 @@ void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles
   for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
     
     // 22 photon, 130 k0L , 211 pi
-    //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
-    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
+    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
+    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
     if (!isPhoton) continue;
     
     /*
@@ -391,8 +405,11 @@ Type                                  Module                      Label         
   hClusterEnergy = FileService->make<TH1F>("hClusterEnergy","hClusterEnergy", 100, 0. , 100.);
   hClusterLayer = FileService->make<TH1F>("hClusterLayer","hClusterLayer", 10, 0. , 10.);
   hClusterLayerRho = FileService->make<TH2F>("hClusterLayerRho","hClusterLayerRho", 10, 0. , 10., 150, 0, 150);
+  hCluster3DSize = FileService->make<TH1F>("hClusterConstituents","hClusterConstituents", 10, 0. , 10.);
 
-  hJetResponse = FileService->make<TH1F>("hClusterResponse","hClusterResponse", 100, 0. , 2.);
+  hRecHitPositionNull = FileService->make<TH2F>("hRecHitPositionNull","hRecHitPositionNull", 100, -5., 5., 628, -3.14, 3.14);
+  hResponse = FileService->make<TH1F>("hResponse","hResponse", 100, 0. , 2.);
+  hMaxClResponse = FileService->make<TH1F>("hMaxClResponse","hMaxClResponse", 100, 0. , 2.);
 
   hClSigmaEtaEtaTot = FileService->make<TH1F>("hClSigmaEtaEtaTot","hClSigmaEtaEtaTot", 100, 0. , 0.05);
   hClSigmaEtaEtaMax = FileService->make<TH1F>("hClSigmaEtaEtaMax","hClSigmaiEtaiEtaMax", 100, 0. , 0.05);
