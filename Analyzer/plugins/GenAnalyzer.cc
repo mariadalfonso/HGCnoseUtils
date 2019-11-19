@@ -82,6 +82,7 @@ using namespace std;
 //#include "CLHEP/Units/PhysicalConstants.h"
 //#include "CLHEP/Units/SystemOfUnits.h"
 
+#include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 
 #include "RecoParticleFlow/PFClusterProducer/plugins/SimMappers/ComputeClusterTime.h"
 
@@ -134,6 +135,8 @@ private:
   edm::EDGetTokenT<HGCalDigiCollection> digiNose_;
   edm::EDGetTokenT<HGCRecHitCollection> recHitNose_;
   
+  edm::EDGetTokenT<std::vector<SimCluster>> simClusterTag_;
+
   edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
 
   TH1F *hLepEta;
@@ -201,6 +204,8 @@ private:
 
   TH2F *hJetResponseHFEta;
   TH2F *hJetResponseNoseEta;
+
+  TH1F *hSimClusterEta;
 
   double coneSize=0.1;
   //  double coneSize=0.4; // good for jets
@@ -647,6 +652,8 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
 
   recHitNose_ = consumes<HGCRecHitCollection>(iConfig.getUntrackedParameter<edm::InputTag>("REChitTAG",edm::InputTag("HGCalRecHit:HGCHFNoseRecHits")));
 
+  simClusterTag_ = consumes<std::vector<SimCluster>>(edm::InputTag("mix","MergedCaloTruth"));
+
   /*
     cout << "---------------------------------------------------" << endl; 
     cout << "-------------------  Token done  ------------------" << endl;
@@ -654,6 +661,8 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
     cout << "---------------------------------------------------" << endl; 
   */   
   
+  hSimClusterEta = FileService->make<TH1F>("hSimClusterEta","hSimClusterEta", 100, -5. , 5.);
+
   hLepPt = FileService->make<TH1F>("hLepPt","hLepPt", 100, 0. , 100.);
   hLepEta = FileService->make<TH1F>("hLepEta","hLepEta", 100, -5. , 5.);
   hLepCharge = FileService->make<TH1F>("hLepCharge","hLepCharge", 4, -2. , 2.);
@@ -773,6 +782,10 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByToken(simHitTag_, theCaloHitContainers);
   std::vector<PCaloHit>               caloHits;
   
+  edm::Handle<std::vector<SimCluster>> simClustersH;
+  iEvent.getByToken(simClusterTag_, simClustersH);
+  std::vector<SimCluster>  simClusters = *(simClustersH.product());;
+
   if(theCaloHitContainers.isValid()) {
    caloHits.insert(caloHits.end(), theCaloHitContainers->begin(), 
 		   theCaloHitContainers->end());
@@ -787,6 +800,14 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    cout << "-----------------  Handles done ----------------" << endl;
    cout << "------------------------------------------------" << endl; 
    */   
+
+   cout << " clusterSize =  " << simClusters.size()<< endl;
+    for (auto const& cl : simClusters) {
+
+      hSimClusterEta->Fill(cl.eta());
+
+    }
+
 
    if(runSingle) getSingle(genParticles, digiNose, noseRecHits, caloHits, Hithf, geom, geoHcal );
 
