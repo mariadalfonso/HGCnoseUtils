@@ -228,6 +228,7 @@ private:
   TH1F * hClSigmaRRTot;
   TH1F * hClSigmaRRMax;
   TH1F * hClZZ;
+  TH1F * hHoverE;
 
   double coneSize=0.4;
   //  double coneSize=0.4; // good for jets
@@ -288,6 +289,7 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
       hClSigmaRRTot->Fill(cl.sigmaRRTot());
       hClSigmaRRMax->Fill(cl.sigmaRRMax());
       hClZZ->Fill(cl.sigmaZZ());
+      hHoverE->Fill(cl.hOverE());
 
       //      GlobalPoint global= triggerTools_.getTCPosition(DetId(cl.detId()));
       //      cout << " global.x()=" << global.x() << " global.y()=" << global.y()  << endl;
@@ -327,8 +329,8 @@ void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles
     
     // 22 photon, 130 k0L , 211 pi
     //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
-    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
+    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
     if (!isPhoton) continue;
     
     /*
@@ -362,8 +364,8 @@ L1Analyzer::L1Analyzer(const edm::ParameterSet& iConfig)
   usesResource("TFileService");  
   genParticlesTag_ = consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag> ("GenParticleTag", edm::InputTag("genParticles")));
 
-  clusters_token_ = consumes<l1t::HGCalClusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Clusters", edm::InputTag("hgcalBackEndLayer1Producer:HGCalBackendLayer1Processor2DClustering")));
-  multiclusters_token_ = consumes<l1t::HGCalMulticlusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Multiclusters", edm::InputTag("hgcalBackEndLayer2Producer:HGCalBackendLayer2Processor3DClustering")));
+  clusters_token_ = consumes<l1t::HGCalClusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Clusters", edm::InputTag("hgcalBackEndLayer1ProducerHFNose:HGCalBackendLayer1Processor2DClustering")));
+  multiclusters_token_ = consumes<l1t::HGCalMulticlusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Multiclusters", edm::InputTag("hgcalBackEndLayer2ProducerHFNose:HGCalBackendLayer2Processor3DClustering")));
 
   /*                                                                                                                                                                                 
 Type                                  Module                      Label             Process
@@ -418,6 +420,7 @@ Type                                  Module                      Label         
   hClSigmaRRTot = FileService->make<TH1F>("hClSigmaRRTot","hClSigmaRRTot", 100, 0. , 0.005);
   hClSigmaRRMax = FileService->make<TH1F>("hClSigmaRRMax","hClSigmaRRMax", 100, 0. , 0.005);
   hClZZ = FileService->make<TH1F>("hClSigmaZZ","hClSigmaZZ", 100, 0. , 12.5);
+  hHoverE = FileService->make<TH1F>("hHoverE","hHoverE", 100, -2. , 4.);
 
 }
 
