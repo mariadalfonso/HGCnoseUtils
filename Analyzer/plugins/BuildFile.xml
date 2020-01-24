@@ -7,7 +7,7 @@
 <use name="CommonTools/UtilAlgos"/>
 <use name="SimCalorimetry/HcalSimAlgos"/>
 <use name="SimCalorimetry/CaloSimAlgos"/>
-
+<use name="SimDataFormats/CaloAnalysis"/>
 
 <use   name="L1Trigger/L1THGCal"/>
 <use   name="L1Trigger/L1THGCalUtilities"/>
