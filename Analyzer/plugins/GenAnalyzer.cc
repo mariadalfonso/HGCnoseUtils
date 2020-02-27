@@ -83,9 +83,10 @@ using namespace std;
 //#include "CLHEP/Units/SystemOfUnits.h"
 
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
+#include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
 
-#include "RecoParticleFlow/PFClusterProducer/plugins/SimMappers/ComputeClusterTime.h"
+//#include "RecoParticleFlow/PFClusterProducer/plugins/SimMappers/ComputeClusterTime.h"
 
 #include "TH1F.h"
 #include "TH2F.h"
@@ -139,10 +140,14 @@ private:
   edm::EDGetTokenT<HGCRecHitCollection> recHitNose_;
   
   edm::EDGetTokenT<std::vector<SimCluster>> simClusterTag_;
+  edm::EDGetTokenT<std::vector<CaloParticle>> caloParticleTag_;
+
   edm::EDGetTokenT<vector<reco::CaloCluster>> recoClusterTag_;
   edm::EDGetTokenT<vector<reco::CaloCluster>> recoNoseClusterTag_;
 
   edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
+
+  TH1F *hDRpi0;
 
   TH1F *hLepEta;
   TH1F *hLepPt;
@@ -213,6 +218,8 @@ private:
   TH1F *hSimClusterEta;
   TH1F *hRecoClusterEta;
   TH1F *hRecoHFNoseClusterEta;
+
+  TH1F *hMpi0;
 
   //$$$$// MONEY PLOTS
   TH2F *hClusterResponseE;
@@ -302,8 +309,7 @@ void GenAnalyzer::analyzeDigi(edm::Handle<HGCalDigiCollection> digiNose, const m
 
   }
 
-  if(time.size() >= 3) timeCl = hgcalsimclustertime::fixSizeHighestDensity(time);
-
+  //  if(time.size() >= 3) timeCl = hgcalsimclustertime::fixSizeHighestDensity(time);
 
   hParticleTime->Fill(timeCl);
 
@@ -701,6 +707,8 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   recHitNose_ = consumes<HGCRecHitCollection>(iConfig.getUntrackedParameter<edm::InputTag>("REChitTAG",edm::InputTag("HGCalRecHit:HGCHFNoseRecHits")));
 
   simClusterTag_ = mayConsume<std::vector<SimCluster>>(edm::InputTag("mix","MergedCaloTruth"));
+  caloParticleTag_ = mayConsume<std::vector<CaloParticle>>(edm::InputTag("mix","MergedCaloTruth"));
+
   recoClusterTag_ = consumes<std::vector<reco::CaloCluster>>(edm::InputTag("hgcalLayerClusters"));
   recoNoseClusterTag_ = consumes<std::vector<reco::CaloCluster>>(edm::InputTag("hgcalLayerClustersHFNose"));
 
@@ -712,6 +720,9 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   */   
   
   hSimClusterEta = FileService->make<TH1F>("hSimClusterEta","hSimClusterEta", 100, -5. , 5.);
+  hMpi0 = FileService->make<TH1F>("hMpi0","hMpi0", 100, 0. , 1.);
+  hDRpi0 = FileService->make<TH1F>("hDRpi0","hDRpi0", 100, 0. , 0.5);
+
   hRecoClusterEta = FileService->make<TH1F>("hRecoClusterEta","hRecoClusterEta", 100, -5. , 5.);
   hRecoHFNoseClusterEta = FileService->make<TH1F>("hRecoHFNoseClusterEta","hRecoHFNoseClusterEta", 100, -5. , 5.);
 
@@ -840,9 +851,17 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByToken(simHitTag_, theCaloHitContainers);
   std::vector<PCaloHit>               caloHits;
   
+  ///###
+
   edm::Handle<std::vector<SimCluster>> simClustersH;
   iEvent.getByToken(simClusterTag_, simClustersH);
   std::vector<SimCluster>  simClusters = *(simClustersH.product());;
+
+  edm::Handle<std::vector<CaloParticle>> caloParticlesH;
+  iEvent.getByToken(caloParticleTag_, caloParticlesH);
+  std::vector<CaloParticle>  caloParticles = *(caloParticlesH.product());;
+
+  ///###
 
   edm::Handle<std::vector<reco::CaloCluster>> recoClustersH;
   iEvent.getByToken(recoClusterTag_, recoClustersH);
@@ -867,9 +886,36 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    cout << "------------------------------------------------" << endl; 
    */   
 
+   cout << " -----------------------------------------------------" << endl;
+
+   std::vector<CaloParticle> clPos;
+   std::vector<CaloParticle> clNeg;
+   for (auto const& cl : caloParticles) {
+
+   /*
+   std::vector<SimCluster> clPos;
+   std::vector<SimCluster> clNeg;
+
    for (auto const& cl : simClusters) {
+   */
      hSimClusterEta->Fill(cl.eta());
+     //     cout << " cl.pdgId() = " << cl.pdgId() << " cl.energy() = " << cl.energy() << " cl.eta() = " << cl.eta() << endl;
+
+     if(cl.eta()>0) clPos.push_back(cl);
+     if(cl.eta()<0) clNeg.push_back(cl);
    }
+
+   double mpi0Pos = (clPos.at(0).p4() + clPos.at(1).p4()).M();
+   double mpi0Neg = (clNeg.at(0).p4() + clNeg.at(1).p4()).M();
+
+   double   thisDeltaPos = ::deltaR(clPos.at(0).eta(), clPos.at(0).phi() , clPos.at(1).eta(), clPos.at(1).phi());
+   double   thisDeltaNeg = ::deltaR(clNeg.at(0).eta(), clNeg.at(0).phi() , clNeg.at(1).eta(), clNeg.at(1).phi());
+
+   hMpi0->Fill(mpi0Pos);
+   hMpi0->Fill(mpi0Neg);
+
+   hDRpi0->Fill(thisDeltaPos);
+   hDRpi0->Fill(thisDeltaNeg);
 
    for (auto const& cl : recoClusters) {
      hRecoClusterEta->Fill(cl.eta());
