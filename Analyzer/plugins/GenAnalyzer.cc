@@ -202,6 +202,10 @@ private:
 
   TH1F *hNmips;
   TH1F *hEnergyMIPS;
+
+  TH1F *hNHitsEE;
+  TH1F *hNHitsHE;
+
   TH1F *hJetResponse;
   TH1F *hJetResponseHF;
   TH1F *hJetResponseNose;
@@ -217,7 +221,11 @@ private:
 
   TH1F *hSimClusterEta;
   TH1F *hRecoClusterEta;
+
   TH1F *hRecoHFNoseClusterEta;
+  TH1F *hRecoHFNoseClusterE;
+  TH1F *hRecoHFNoseClusterEee;
+  TH1F *hRecoHFNoseClusterEhe;
 
   TH1F *hMpi0;
 
@@ -228,8 +236,8 @@ private:
   TH1F *hRecHitResponse;
   //$$$$//
 
-  double coneSize=0.1;
-  //  double coneSize=0.4; // good for jets
+  //  double coneSize=0.1;
+  double coneSize=0.4; // good for jets
   double hadWeight=1.;
   bool doSingle=false;
 
@@ -320,7 +328,10 @@ void GenAnalyzer::analyzeClusters(std::vector<reco::CaloCluster> recoNoseCluster
   TLorentzVector EsumVectorNose(0.,0.,0.,0.);
 
     for (auto const& cl : recoNoseClusters) {
-      //      hRecoHFNoseClusterEta->Fill(cl.eta());
+      hRecoHFNoseClusterEta->Fill(cl.eta());
+      hRecoHFNoseClusterE->Fill(cl.energy());
+      hRecoHFNoseClusterEee->Fill(cl.energy());
+      hRecoHFNoseClusterEhe->Fill(cl.energy());
 
       double energy      = cl.energy();
       double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
@@ -419,14 +430,15 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
   }
 
-  double thicknessCorrection = 0.759;
+  double thicknessCorrectionEM = 0.759;
+  double thicknessCorrectionHad = 0.84;
   // old v8 thicknessCorrection = 1.132
   // https://github.com/cms-sw/cmssw/blob/71bcdf3775b9bbc8911257bfc67fce073b44a0b0/RecoLocalCalo/HGCalRecProducers/python/HGCalRecHit_cfi.py#L233;
 
   double EnergySumNOSE = 0.;
 
-  double keV2MIP = 0.044259;
-  double fCPerMIP = 1.25;
+  //  double keV2MIP = 0.044259;
+  //  double fCPerMIP = 1.25;
 
   //      hit.energy() in KeV
   //      double numberOfMIPin1GeV = (45./1000000);
@@ -440,6 +452,9 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
   double  EsumH=0.;
   //
   double  Esum1=0., Esum2=0., Esum3=0., Esum4=0., Esum5=0., Esum6=0., Esum7=0., Esum8=0.;
+
+  int NhitsEE = 0 ;
+  int NhitsHE = 0 ;
 
   if(true)  { 
 
@@ -473,7 +488,6 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
       // 0.1 MeV
       if ( thisDeltaR1 < coneSize ) {
 	
-
 	if(false) {	
 	  std::cout << "detId = " << detId ;
 	  std::cout << "  subdet = " << subdet ;
@@ -497,26 +511,25 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 	double pz = cos(theta);
 	TLorentzVector constituentbase(px,py,pz,1);
 
-	if(detId.layer()==1) { double e=hit.energy()/thicknessCorrection;  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==2) { double e=hit.energy()/thicknessCorrection;  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==3) { double e=hit.energy()/thicknessCorrection;  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==4) { double e=hit.energy()/thicknessCorrection;  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==5) { double e=hit.energy()/thicknessCorrection;  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==6) { double e=hit.energy()/thicknessCorrection;  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==7) { double e=hit.energy()/thicknessCorrection;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==8) { double e=hit.energy()/thicknessCorrection;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==1) { double e=hit.energy();  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx1)>1) NhitsEE++; };
+	if(detId.layer()==2) { double e=hit.energy();  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx2)>1) NhitsEE++; };
+	if(detId.layer()==3) { double e=hit.energy();  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx3)>1) NhitsEE++; };
+	if(detId.layer()==4) { double e=hit.energy();  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx4)>1) NhitsEE++; };
+	if(detId.layer()==5) { double e=hit.energy();  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx5)>1) NhitsEE++; };
+	if(detId.layer()==6) { double e=hit.energy();  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx6)>1) NhitsEE++; };
+	if(detId.layer()==7) { double e=hit.energy();  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx7)>1) NhitsHE++; };
+	if(detId.layer()==8) { double e=hit.energy();  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; if((nMIPs/dedx8)>1) NhitsHE++; };
 
 	/* below for simHits
-	if(detId.layer()==1) { double e=nMIPs*dedx1*0.001/thicknessCorrection;  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==2) { double e=nMIPs*dedx2*0.001/thicknessCorrection;  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==3) { double e=nMIPs*dedx3*0.001/thicknessCorrection;  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==4) { double e=nMIPs*dedx4*0.001/thicknessCorrection;  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==5) { double e=nMIPs*dedx5*0.001/thicknessCorrection;  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==6) { double e=nMIPs*dedx6*0.001/thicknessCorrection;  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==7) { double e=nMIPs*dedx7*0.001/thicknessCorrection;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
-	if(detId.layer()==8) { double e=nMIPs*dedx8*0.001/thicknessCorrection;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==1) { double e=nMIPs*dedx1*0.001/thicknessCorrectionEM;  Esum1 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==2) { double e=nMIPs*dedx2*0.001/thicknessCorrectionEM;  Esum2 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==3) { double e=nMIPs*dedx3*0.001/thicknessCorrectionEM;  Esum3 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==4) { double e=nMIPs*dedx4*0.001/thicknessCorrectionEM;  Esum4 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==5) { double e=nMIPs*dedx5*0.001/thicknessCorrectionEM;  Esum5 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==6) { double e=nMIPs*dedx6*0.001/thicknessCorrectionEM;  Esum6 += e ; Esum  += e ; EsumE += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==7) { double e=nMIPs*dedx7*0.001/thicknessCorrectionEM;  Esum7 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
+	if(detId.layer()==8) { double e=nMIPs*dedx8*0.001/thicknessCorrectionEM;  Esum8 += e ; Esum  += hadWeight*e ; EsumH += e ; EsumVectorNose+= e*constituentbase; };
 	*/
-
 	double radius=sqrt(global.x()*global.x() + global.y()*global.y());
 	
 	hEnergyPosition->Fill(abs(global.z()),radius);
@@ -529,6 +542,9 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
     }
 
   }
+
+  hNHitsEE->Fill(NhitsEE);
+  hNHitsHE->Fill(NhitsHE);
 
 
   EnergySumNOSE = Esum;
@@ -583,7 +599,7 @@ void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticle
 
    // 22 photon, 130 k0L , 211 pi
    //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-    //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
     bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
    //   if (!isPhoton) continue;
 
@@ -726,6 +742,10 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   hRecoClusterEta = FileService->make<TH1F>("hRecoClusterEta","hRecoClusterEta", 100, -5. , 5.);
   hRecoHFNoseClusterEta = FileService->make<TH1F>("hRecoHFNoseClusterEta","hRecoHFNoseClusterEta", 100, -5. , 5.);
 
+  hRecoHFNoseClusterE = FileService->make<TH1F>("hRecoHFNoseClusterE","hRecoHFNoseClusterE", 100, 0. , 1000.);
+  hRecoHFNoseClusterEee = FileService->make<TH1F>("hRecoHFNoseClusterEee","hRecoHFNoseClusterEee", 100, 0. , 1000.);
+  hRecoHFNoseClusterEhe = FileService->make<TH1F>("hRecoHFNoseClusterEhe","hRecoHFNoseClusterEhe", 100, 0. , 1000.);
+
   hLepPt = FileService->make<TH1F>("hLepPt","hLepPt", 100, 0. , 100.);
   hLepEta = FileService->make<TH1F>("hLepEta","hLepEta", 100, -5. , 5.);
   hLepCharge = FileService->make<TH1F>("hLepCharge","hLepCharge", 4, -2. , 2.);
@@ -767,8 +787,10 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   hEnergyEtaPhi = FileService->make<TH2F>("hEnergyEtaPhi","hEnergyEtaPhi", 100, -5., 5., 18*2, -3.14, 3.14);
   // modularity of the HF is 18 tile in phi
   hEnergyEtaPhiHF = FileService->make<TH2F>("hEnergyEtaPhiHF","hEnergyEtaPhiHF", 100, -5., 5., 628, -3.14, 3.14);
-  hNmips = FileService->make<TH1F>("hNmips","hNmips", 100, 0. , 5000.);
+  hNmips = FileService->make<TH1F>("hNmips","hNmips", 500, 0. , 500.);
   hEnergyMIPS = FileService->make<TH1F>("hEnergyMIPS","hEnergyMIPS", 100, 0. , 0.0001);
+  hNHitsEE = FileService->make<TH1F>("hNHitsEE","hNHitsEE", 500, 0. , 1000.);
+  hNHitsHE = FileService->make<TH1F>("hNHitsHE","hNHitsHE", 500, 0. , 1000.);
 
   double myInt=10.;
 
@@ -853,6 +875,7 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   
   ///###
 
+  /*
   edm::Handle<std::vector<SimCluster>> simClustersH;
   iEvent.getByToken(simClusterTag_, simClustersH);
   std::vector<SimCluster>  simClusters = *(simClustersH.product());;
@@ -860,6 +883,7 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<std::vector<CaloParticle>> caloParticlesH;
   iEvent.getByToken(caloParticleTag_, caloParticlesH);
   std::vector<CaloParticle>  caloParticles = *(caloParticlesH.product());;
+  */
 
   ///###
 
@@ -886,18 +910,17 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    cout << "------------------------------------------------" << endl; 
    */   
 
-   cout << " -----------------------------------------------------" << endl;
+   /*
 
    std::vector<CaloParticle> clPos;
    std::vector<CaloParticle> clNeg;
    for (auto const& cl : caloParticles) {
 
-   /*
-   std::vector<SimCluster> clPos;
-   std::vector<SimCluster> clNeg;
+//   std::vector<SimCluster> clPos;
+//   std::vector<SimCluster> clNeg;
 
-   for (auto const& cl : simClusters) {
-   */
+//   for (auto const& cl : simClusters) {
+
      hSimClusterEta->Fill(cl.eta());
      //     cout << " cl.pdgId() = " << cl.pdgId() << " cl.energy() = " << cl.energy() << " cl.eta() = " << cl.eta() << endl;
 
@@ -916,6 +939,8 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
    hDRpi0->Fill(thisDeltaPos);
    hDRpi0->Fill(thisDeltaNeg);
+
+   */
 
    for (auto const& cl : recoClusters) {
      hRecoClusterEta->Fill(cl.eta());
