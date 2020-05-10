@@ -125,7 +125,7 @@ private:
 
   std::vector<const reco::GenJet*> doVBSselection(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<reco::GenJetCollection> genJets);
 
-  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection & recHitNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle>, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection & recHitNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
   // ----------member data ---------------------------
   //  void ClearVariables();
@@ -591,43 +591,60 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
 }
 
-void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection& recHitNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle> caloParticles, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection& recHitNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
   
   doSingle=true;
+  //  int pdgId=22;
+  //  int pdgId=211;
 
-  for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
+  if(false) {
+    for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
 
-   // 22 photon, 130 k0L , 211 pi
-   //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-    //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
-    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
-   //   if (!isPhoton) continue;
+      // 22 photon, 130 k0L , 211 pi
+      //   bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
+      //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+      bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
+      if (!isPhoton) continue;
 
-   /*
-   bool isGluon = ( genpart->status()==23 and abs(genpart->pdgId())==21 and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
-   if (!isGluon) continue;
-   */
-    /*
-   bool isQuark = ( genpart->status()==23 and (abs(genpart->pdgId())==1 or abs(genpart->pdgId())==2 or abs(genpart->pdgId())==3) and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
-   if (!isQuark) continue;
-    */
-    //   cout << ">>>>>>> pid,status,px,py,pz,e,eta,phi= "  << genpart->pdgId() << " , " << genpart->status() << " , " << genpart->px() << " , " << genpart->py() << " , " << genpart->pz() << " , " << genpart->energy() << " , ( " << genpart->eta() << " , " << genpart->phi() << ") " << endl;
+      /*
+	bool isGluon = ( genpart->status()==23 and abs(genpart->pdgId())==21 and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
+	if (!isGluon) continue;
+      */
+      /*
+	bool isQuark = ( genpart->status()==23 and (abs(genpart->pdgId())==1 or abs(genpart->pdgId())==2 or abs(genpart->pdgId())==3) and abs(genpart->eta())<4.2 and abs(genpart->eta())>3  );
+	if (!isQuark) continue;
+      */
+      //   cout << ">>>>>>> pid,status,px,py,pz,e,eta,phi= "  << genpart->pdgId() << " , " << genpart->status() << " , " << genpart->px() << " , " << genpart->py() << " , " << genpart->pz() << " , " << genpart->energy() << " , ( " << genpart->eta() << " , " << genpart->phi() << ") " << endl;
 
-   hGenParticleEta->Fill(abs(genpart->eta()));
-   hGenParticlePt->Fill(genpart->pt());
-   hGenParticleE->Fill(genpart->energy());
-   
-   // this is DIGI
-   double E = analyzeHits(hits, recHitNose, hfhits, genpart->p4(), genpart->energy(), geom, geomHcal, true);
+      hGenParticleEta->Fill(abs(genpart->eta()));
+      hGenParticlePt->Fill(genpart->pt());
+      hGenParticleE->Fill(genpart->energy());
 
-   //   analyzeDigi(digiNose, genpart->p4(), geom);
-   analyzeClusters(recoNoseClusters, genpart->p4(), genpart->energy(), geom);
-   
- }
+      // this is DIGI
+      double E = analyzeHits(hits, recHitNose, hfhits, genpart->p4(), genpart->energy(), geom, geomHcal, true);
+      //   analyzeDigi(digiNose, genpart->p4(), geom);
+      analyzeClusters(recoNoseClusters, genpart->p4(), genpart->energy(), geom);
 
+    }
+  }
+
+  if(true) {
+    for (auto const& cl : caloParticles) {
+      //     cout << " cl.pdgId() = " << cl.pdgId() << " cl.energy() = " << cl.energy() << " cl.eta() = " << cl.eta() << endl;
+      bool isPhoton = ( abs(cl.pdgId())==22 );
+      //      bool isPhoton = ( abs(cl.pdgId())==211 );
+      if (!isPhoton) continue;
+
+      const math::XYZTLorentzVector p4=(math::XYZTLorentzVector) cl.p4();
+
+      // this is DIGI
+      double E = analyzeHits(hits, recHitNose, hfhits, p4, cl.energy(), geom, geomHcal, true);
+      //   analyzeDigi(digiNose, genpart->p4(), geom);
+      analyzeClusters(recoNoseClusters, p4, cl.energy(), geom);
+
+    }
+  }
 }
-
-
 
 
 std::vector<const reco::GenJet*> GenAnalyzer::doVBSselection(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<reco::GenJetCollection> genJets) {
@@ -875,7 +892,6 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   
   ///###
 
-  /*
   edm::Handle<std::vector<SimCluster>> simClustersH;
   iEvent.getByToken(simClusterTag_, simClustersH);
   std::vector<SimCluster>  simClusters = *(simClustersH.product());;
@@ -883,7 +899,6 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<std::vector<CaloParticle>> caloParticlesH;
   iEvent.getByToken(caloParticleTag_, caloParticlesH);
   std::vector<CaloParticle>  caloParticles = *(caloParticlesH.product());;
-  */
 
   ///###
 
@@ -910,24 +925,24 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    cout << "------------------------------------------------" << endl; 
    */   
 
-   /*
+   //   std::vector<CaloParticle> clPos;
+   //   std::vector<CaloParticle> clNeg;
+   //   for (auto const& cl : caloParticles) {
 
-   std::vector<CaloParticle> clPos;
-   std::vector<CaloParticle> clNeg;
-   for (auto const& cl : caloParticles) {
+   std::vector<SimCluster> clPos;
+   std::vector<SimCluster> clNeg;
 
-//   std::vector<SimCluster> clPos;
-//   std::vector<SimCluster> clNeg;
-
-//   for (auto const& cl : simClusters) {
+   for (auto const& cl : simClusters) {
 
      hSimClusterEta->Fill(cl.eta());
      //     cout << " cl.pdgId() = " << cl.pdgId() << " cl.energy() = " << cl.energy() << " cl.eta() = " << cl.eta() << endl;
 
      if(cl.eta()>0) clPos.push_back(cl);
      if(cl.eta()<0) clNeg.push_back(cl);
+
    }
 
+   /*
    double mpi0Pos = (clPos.at(0).p4() + clPos.at(1).p4()).M();
    double mpi0Neg = (clNeg.at(0).p4() + clNeg.at(1).p4()).M();
 
@@ -946,7 +961,7 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      hRecoClusterEta->Fill(cl.eta());
    }
 
-   if(runSingle) getSingle(genParticles, recoNoseClusters, digiNose, noseRecHits, caloHits, Hithf, geom, geoHcal );
+   if(runSingle) getSingle(genParticles, caloParticles, recoNoseClusters, digiNose, noseRecHits, caloHits, Hithf, geom, geoHcal );
 
    return;
    
