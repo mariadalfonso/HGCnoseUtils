@@ -85,6 +85,8 @@ using namespace std;
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 #include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/HGCalReco/interface/TICLLayerTile.h"
+#include "DataFormats/HGCalReco/interface/Trackster.h"
 
 //#include "RecoParticleFlow/PFClusterProducer/plugins/SimMappers/ComputeClusterTime.h"
 
@@ -121,11 +123,12 @@ private:
 
   double analyzeHits(const std::vector<PCaloHit>&, const HGCRecHitCollection & recHitNose, const HFRecHitCollection& , const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal, bool );
 
-  void analyzeClusters(std::vector<reco::CaloCluster> recoNoseClusters,const math::XYZTLorentzVector & initialP4, const double & jetE, const HGCalGeometry* geom);
+  void analyzeClusters(std::vector<reco::CaloCluster> recoNoseClusters,const math::XYZTLorentzVector & initialP4, const double & jetE);
+  void analyzeTracksters(std::vector<ticl::Trackster> recoNoseTracksters,const math::XYZTLorentzVector & initialP4, const double & jetE);
 
   std::vector<const reco::GenJet*> doVBSselection(edm::Handle<reco::GenParticleCollection> genParticles, edm::Handle<reco::GenJetCollection> genJets);
 
-  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle>, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection & recHitNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle>, std::vector<ticl::Trackster> recoNoseTracksters, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection & recHitNose, const std::vector<PCaloHit>&, const HFRecHitCollection&, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
   // ----------member data ---------------------------
   //  void ClearVariables();
@@ -144,6 +147,7 @@ private:
 
   edm::EDGetTokenT<vector<reco::CaloCluster>> recoClusterTag_;
   edm::EDGetTokenT<vector<reco::CaloCluster>> recoNoseClusterTag_;
+  edm::EDGetTokenT<std::vector<ticl::Trackster>> recoTracksterTag_;
 
   edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
 
@@ -220,12 +224,28 @@ private:
   TH2F *hJetResponseNoseEta;
 
   TH1F *hSimClusterEta;
-  TH1F *hRecoClusterEta;
 
+  TH1F *hRecoClusterEta;
   TH1F *hRecoHFNoseClusterEta;
   TH1F *hRecoHFNoseClusterE;
   TH1F *hRecoHFNoseClusterEee;
   TH1F *hRecoHFNoseClusterEhe;
+
+  TH1F *hRecoClusterSize_L0;
+  TH1F *hRecoClusterSize_L1;
+  TH1F *hRecoClusterSize_L2;
+  TH1F *hRecoClusterSize_L3;
+  TH1F *hRecoClusterSize_L4;
+  TH1F *hRecoClusterSize_L5;
+  TH1F *hRecoClusterSize_L6;
+  TH1F *hRecoClusterSize_L7;
+  TH1F *hRecoClusterSize_L8;
+
+  TH1F *hRecoTracksterEta;
+  TH1F *hRecoHFNoseTracksterEta;
+  TH1F *hRecoHFNoseTracksterE;
+  TH1F *hRecoHFNoseTracksterEee;
+  TH1F *hRecoHFNoseTracksterEhe;
 
   TH1F *hMpi0;
 
@@ -234,10 +254,11 @@ private:
   TH2F *hRecHitResponseE;
   TH1F *hClusterResponse;
   TH1F *hRecHitResponse;
+  TH1F *hTracksterResponse;
   //$$$$//
 
   //  double coneSize=0.1;
-  double coneSize=0.4; // good for jets
+  double coneSize=0.5; // good for jets
   double hadWeight=1.;
   bool doSingle=false;
 
@@ -323,15 +344,66 @@ void GenAnalyzer::analyzeDigi(edm::Handle<HGCalDigiCollection> digiNose, const m
 
 }
 
-void GenAnalyzer::analyzeClusters(std::vector<reco::CaloCluster> recoNoseClusters,const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom) {
+void GenAnalyzer::analyzeTracksters(std::vector<ticl::Trackster> recoNoseTracksters, const math::XYZTLorentzVector & initialP4, const double & trueE) {
 
   TLorentzVector EsumVectorNose(0.,0.,0.,0.);
+
+    for (auto const& cl : recoNoseTracksters) {
+      hRecoHFNoseTracksterEta->Fill(cl.barycenter().eta());
+      //      hRecoHFNoseTracksterE->Fill(cl.energy());
+      //      hRecoHFNoseTracksterEee->Fill(cl.energy());
+      //      hRecoHFNoseTracksterEhe->Fill(cl.energy());
+
+      double energy      = cl.raw_energy();
+      double   thisDeltaR1 = ::deltaR(cl.barycenter().eta(), cl.barycenter().phi() , initialP4.eta(), initialP4.phi());
+
+      // 0.1 MeV
+      if ( thisDeltaR1 < coneSize ) {
+
+        double theta = 2 * atan(exp(-cl.barycenter().eta()));
+        double phi = cl.barycenter().phi();
+        double px = sin(theta)*cos(phi);
+        double py = sin(theta)*sin(phi);
+        double pz = cos(theta);
+        TLorentzVector constituentbase(px,py,pz,1);
+
+	EsumVectorNose+= energy*constituentbase;
+
+	//	hTracksterResponse->Fill(energy/trueE);
+
+      }
+    }
+
+    hTracksterResponse->Fill((EsumVectorNose).Energy()/trueE);
+    hClusterResponseE->Fill(trueE, (EsumVectorNose).Energy()/trueE);
+}
+
+void GenAnalyzer::analyzeClusters(std::vector<reco::CaloCluster> recoNoseClusters,const math::XYZTLorentzVector & initialP4, const double & trueE) {
+
+  TLorentzVector EsumVectorNose(0.,0.,0.,0.);
+
+  int numL0=0, numL1=0, numL2=0, numL3=0, numL4=0, numL5=0, numL6=0, numL7=0, numL8=0;
+
+  double EsumCl=0;
 
     for (auto const& cl : recoNoseClusters) {
       hRecoHFNoseClusterEta->Fill(cl.eta());
       hRecoHFNoseClusterE->Fill(cl.energy());
       hRecoHFNoseClusterEee->Fill(cl.energy());
       hRecoHFNoseClusterEhe->Fill(cl.energy());
+
+      if(cl.hitsAndFractions().size() > 0) {
+	int layer= HFNoseDetId(cl.hitsAndFractions().at(0).first).layer();
+	if(layer==0) numL0++;
+	if(layer==1) numL1++;
+	if(layer==2) numL2++;
+	if(layer==3) numL3++;
+	if(layer==4) numL4++;
+	if(layer==5) numL5++;
+	if(layer==6) numL6++;
+	if(layer==7) numL7++;
+	if(layer==8) numL8++;
+      }
 
       double energy      = cl.energy();
       double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
@@ -347,12 +419,22 @@ void GenAnalyzer::analyzeClusters(std::vector<reco::CaloCluster> recoNoseCluster
         TLorentzVector constituentbase(px,py,pz,1);
 
 	EsumVectorNose+= energy*constituentbase;
-
+	EsumCl += energy;
       }
     }
 
     //    hClusterResponseE->Fill(trueE, (EsumVectorNose).Energy()/trueE);
     hClusterResponse->Fill((EsumVectorNose).Energy()/trueE);
+    //    hClusterResponse->Fill(EsumCl/trueE);
+    hRecoClusterSize_L0->Fill(numL0);
+    hRecoClusterSize_L1->Fill(numL1);
+    hRecoClusterSize_L2->Fill(numL2);
+    hRecoClusterSize_L3->Fill(numL3);
+    hRecoClusterSize_L4->Fill(numL4);
+    hRecoClusterSize_L5->Fill(numL5);
+    hRecoClusterSize_L6->Fill(numL6);
+    hRecoClusterSize_L7->Fill(numL7);
+    hRecoClusterSize_L8->Fill(numL8);
 
 }
 
@@ -478,6 +560,9 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
       int layer   = detId.layer();
       int zside   = detId.zside();
       
+      // emulate the ZS threshould 0.5*MIP
+      //      if(hit.energy() < 0.5*numberOfMIPin1GeV) continue;
+
       GlobalPoint global = geom->getPosition(id);
       
       if(verbose) cout << " position ("  << global.x() << ", " 
@@ -580,6 +665,7 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
   // VECTOR SUM
   hRecHitResponse->Fill((EsumVectorNose).Energy()/trueE);
+  //  hRecHitResponse->Fill((EsumVectorNose).Energy()/trueE);
   //  hRecHitResponseE->Fill(trueE, (EsumVectorNose).Energy()/trueE);
   hJetResponseE->Fill(trueE, (EsumVectorNose+EsumVectorHF).Energy()/trueE);
   hJetResponseEta->Fill(initialP4.eta(), (EsumVectorNose+EsumVectorHF).Energy()/trueE);
@@ -591,7 +677,7 @@ double GenAnalyzer::analyzeHits(std::vector<PCaloHit> const& simHits,  const HGC
 
 }
 
-void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle> caloParticles, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection& recHitNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, std::vector<CaloParticle> caloParticles, std::vector<ticl::Trackster> recoNoseTracksters, std::vector<reco::CaloCluster> recoNoseClusters, edm::Handle<HGCalDigiCollection> digiNose, const HGCRecHitCollection& recHitNose, const std::vector<PCaloHit>& hits, const HFRecHitCollection& hfhits, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
   
   doSingle=true;
   //  int pdgId=22;
@@ -623,24 +709,29 @@ void GenAnalyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticle
       // this is DIGI
       double E = analyzeHits(hits, recHitNose, hfhits, genpart->p4(), genpart->energy(), geom, geomHcal, true);
       //   analyzeDigi(digiNose, genpart->p4(), geom);
-      analyzeClusters(recoNoseClusters, genpart->p4(), genpart->energy(), geom);
-
+      analyzeClusters(recoNoseClusters, genpart->p4(), genpart->energy());
+      analyzeTracksters(recoNoseTracksters, genpart->p4(), genpart->energy());
     }
   }
 
   if(true) {
     for (auto const& cl : caloParticles) {
       //     cout << " cl.pdgId() = " << cl.pdgId() << " cl.energy() = " << cl.energy() << " cl.eta() = " << cl.eta() << endl;
-      bool isPhoton = ( abs(cl.pdgId())==22 );
+      bool isPhoton = ( abs(cl.pdgId())==13 );
+      //      bool isPhoton = ( abs(cl.pdgId())==22 );
       //      bool isPhoton = ( abs(cl.pdgId())==211 );
       if (!isPhoton) continue;
+
+      const SimClusterRefVector& simClusterRefVector = cl.simClusters();
+      if(simClusterRefVector.size()==0) continue;
 
       const math::XYZTLorentzVector p4=(math::XYZTLorentzVector) cl.p4();
 
       // this is DIGI
       double E = analyzeHits(hits, recHitNose, hfhits, p4, cl.energy(), geom, geomHcal, true);
       //   analyzeDigi(digiNose, genpart->p4(), geom);
-      analyzeClusters(recoNoseClusters, p4, cl.energy(), geom);
+      analyzeClusters(recoNoseClusters, p4, cl.energy());
+      analyzeTracksters(recoNoseTracksters, p4, cl.energy());
 
     }
   }
@@ -682,7 +773,7 @@ std::vector<const reco::GenJet*> GenAnalyzer::doVBSselection(edm::Handle<reco::G
   for(reco::GenJetCollection::const_iterator genJ = genJets->begin(); genJ != genJets->end(); ++genJ){
     
     if( verbose && genJ->energy()>100) cout << " JETS >>>>>>> status,  px,py,pz,e,eta= "  << " , " << genJ->status() << " , " << genJ->px() << " , " << genJ->py() << " , " << genJ->pz() << " , " << genJ->energy() << " , (" << genJ->eta() << " , " << genJ->phi() << ") " << endl;
-    if( verbose && abs(genJ->eta())>3 ) cout << " this is candidate " << endl; 
+    if( verbose && abs(genJ->eta())>3 ) cout << " this is candidate " << endl;
     
     double thisDeltaR1 = 0.;
     double thisDeltaR2 = 0.;
@@ -745,31 +836,60 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   recoClusterTag_ = consumes<std::vector<reco::CaloCluster>>(edm::InputTag("hgcalLayerClusters"));
   recoNoseClusterTag_ = consumes<std::vector<reco::CaloCluster>>(edm::InputTag("hgcalLayerClustersHFNose"));
 
+  recoTracksterTag_ = consumes<std::vector<ticl::Trackster>>(iConfig.getUntrackedParameter<edm::InputTag>("bla",edm::InputTag("hfnticlTrackstersEM")));
+
   /*
-    cout << "---------------------------------------------------" << endl; 
+    cout << "---------------------------------------------------" << endl;
     cout << "-------------------  Token done  ------------------" << endl;
     cout << "-----------------  book-histo done  ---------------" << endl;
-    cout << "---------------------------------------------------" << endl; 
+    cout << "---------------------------------------------------" << endl;
   */   
   
-  hSimClusterEta = FileService->make<TH1F>("hSimClusterEta","hSimClusterEta", 100, -5. , 5.);
+
+  hGenParticleEta = FileService->make<TH1F>("GenParticleEta","hGenParticleEta", 100, 0. , 5.);
+  hGenParticlePt = FileService->make<TH1F>("GenParticlePt","hGenParticlePt", 100, 0. , 100.);
+  hGenParticleE = FileService->make<TH1F>("GenParticleE","hGenParticleE", 100, 0. , 1000.);
+
+  hSimClusterEta = FileService->make<TH1F>("SimClusterEta","hSimClusterEta", 100, -5. , 5.);
+  hRecoClusterEta = FileService->make<TH1F>("CaloParticleEta","CaloParticleEta", 100, -5. , 5.);
+
+  hClusterResponse = FileService->make<TH1F>("Cluster_Response","hClusterResponse", 100, 0. , 2.);
+  hClusterResponseE = FileService->make<TH2F>("Cluster_Response_vs_E","hClusterResponseE", 1000., 0, 1000., 100, 0. , 2.);
+  hRecoHFNoseClusterEta = FileService->make<TH1F>("Cluster_RecoHFNose_Eta","hRecoHFNoseClusterEta", 100, -5. , 5.);
+  hRecoHFNoseClusterE = FileService->make<TH1F>("Cluster_RecoHFNose_E","hRecoHFNoseClusterE", 100, 0. , 1000.);
+  hRecoHFNoseClusterEee = FileService->make<TH1F>("Cluster_RecoHFNose_Eee","hRecoHFNoseClusterEee", 100, 0. , 1000.);
+  hRecoHFNoseClusterEhe = FileService->make<TH1F>("Cluster_RecoHFNose_Ehe","hRecoHFNoseClusterEhe", 100, 0. , 1000.);
+
+  hRecoClusterSize_L0  = FileService->make<TH1F>("ClusterSize_L0","hRecoClusterSize_L0", 100, 0. , 100.);
+  hRecoClusterSize_L1  = FileService->make<TH1F>("ClusterSize_L1","hRecoClusterSize_L1", 100, 0. , 100.);
+  hRecoClusterSize_L2  = FileService->make<TH1F>("ClusterSize_L2","hRecoClusterSize_L2", 100, 0. , 100.);
+  hRecoClusterSize_L3  = FileService->make<TH1F>("ClusterSize_L3","hRecoClusterSize_L3", 100, 0. , 100.);
+  hRecoClusterSize_L4  = FileService->make<TH1F>("ClusterSize_L4","hRecoClusterSize_L4", 100, 0. , 100.);
+  hRecoClusterSize_L5  = FileService->make<TH1F>("ClusterSize_L5","hRecoClusterSize_L5", 100, 0. , 100.);
+  hRecoClusterSize_L6  = FileService->make<TH1F>("ClusterSize_L6","hRecoClusterSize_L6", 100, 0. , 100.);
+  hRecoClusterSize_L7  = FileService->make<TH1F>("ClusterSize_L7","hRecoClusterSize_L7", 100, 0. , 100.);
+  hRecoClusterSize_L8  = FileService->make<TH1F>("ClusterSize_L8","hRecoClusterSize_L8", 100, 0. , 100.);
+
+  hTracksterResponse = FileService->make<TH1F>("Trackster_Response","hClusterResponse", 100, 0. , 2.);
+  hRecoTracksterEta = FileService->make<TH1F>("Trackster_RecoEta","hRecoTracksterEta", 100, -5. , 5.);
+  hRecoHFNoseTracksterEta = FileService->make<TH1F>("Trackster_HFNose_Eta","hRecoHFNoseTracksterEta", 100, -5. , 5.);
+  hRecoHFNoseTracksterE = FileService->make<TH1F>("Trackster_HFNose_E","hRecoHFNoseTracksterE", 100, 0. , 1000.);
+  hRecoHFNoseTracksterEee = FileService->make<TH1F>("Trackster_HFNoseTrackster_Eee","hRecoHFNoseTracksterEee", 100, 0. , 1000.);
+  hRecoHFNoseTracksterEhe = FileService->make<TH1F>("Trackster_HFNoseTrackster_Ehe","hRecoHFNoseTracksterEhe", 100, 0. , 1000.);
+
+  //     cout << "---------------------------------------------------" << endl;
+
+  hRecHitResponseE = FileService->make<TH2F>("hRecHitResponseE","hRecHitResponseE", 1000., 0, 1000., 100, 0. , 2.);
+  hRecHitResponse = FileService->make<TH1F>("hRecHitResponse","hRecHitResponse", 100, 0. , 2.);
+
+  //     cout << "---------------------------------------------------" << endl;
+
   hMpi0 = FileService->make<TH1F>("hMpi0","hMpi0", 100, 0. , 1.);
   hDRpi0 = FileService->make<TH1F>("hDRpi0","hDRpi0", 100, 0. , 0.5);
-
-  hRecoClusterEta = FileService->make<TH1F>("hRecoClusterEta","hRecoClusterEta", 100, -5. , 5.);
-  hRecoHFNoseClusterEta = FileService->make<TH1F>("hRecoHFNoseClusterEta","hRecoHFNoseClusterEta", 100, -5. , 5.);
-
-  hRecoHFNoseClusterE = FileService->make<TH1F>("hRecoHFNoseClusterE","hRecoHFNoseClusterE", 100, 0. , 1000.);
-  hRecoHFNoseClusterEee = FileService->make<TH1F>("hRecoHFNoseClusterEee","hRecoHFNoseClusterEee", 100, 0. , 1000.);
-  hRecoHFNoseClusterEhe = FileService->make<TH1F>("hRecoHFNoseClusterEhe","hRecoHFNoseClusterEhe", 100, 0. , 1000.);
 
   hLepPt = FileService->make<TH1F>("hLepPt","hLepPt", 100, 0. , 100.);
   hLepEta = FileService->make<TH1F>("hLepEta","hLepEta", 100, -5. , 5.);
   hLepCharge = FileService->make<TH1F>("hLepCharge","hLepCharge", 4, -2. , 2.);
-
-  hGenParticleEta = FileService->make<TH1F>("hGenParticleEta","hGenParticleEta", 100, 0. , 5.);
-  hGenParticlePt = FileService->make<TH1F>("hGenParticlePt","hGenParticlePt", 100, 0. , 100.);
-  hGenParticleE = FileService->make<TH1F>("hGenParticleE","hGenParticleE", 100, 0. , 1000.);
 
   hJetEta = FileService->make<TH1F>("hJetEta","hJetEta", 100, 0. , 5.);
   hJetEtaLarge = FileService->make<TH1F>("hJetEtaLarge","hJetEtaLarge", 100, 0. , 5.);
@@ -832,12 +952,6 @@ GenAnalyzer::GenAnalyzer(const edm::ParameterSet& iConfig)
   hJetResponseNoseEta = FileService->make<TH2F>("hJetResponseNoseEta","hJetResponseNoseEta", 100., -5., 5., 100, 0. , 2.);
 
   hJetResponseE = FileService->make<TH2F>("hJetResponseE","hJetResponseE", 1000., 0, 1000., 100, 0. , 2.);
-
-  hClusterResponseE = FileService->make<TH2F>("hClusterResponseE","hClusterResponseE", 1000., 0, 1000., 100, 0. , 2.);
-  hRecHitResponseE = FileService->make<TH2F>("hRecHitResponseE","hRecHitResponseE", 1000., 0, 1000., 100, 0. , 2.);
-
-  hClusterResponse = FileService->make<TH1F>("hClusterResponse","hClusterResponse", 100, 0. , 2.);
-  hRecHitResponse = FileService->make<TH1F>("hRecHitResponse","hRecHitResponse", 100, 0. , 2.);
 
 }
 
@@ -910,6 +1024,10 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByToken(recoNoseClusterTag_, recoNoseClustersH);
   std::vector<reco::CaloCluster>  recoNoseClusters = *(recoNoseClustersH.product());;
 
+  edm::Handle<std::vector<ticl::Trackster>> recoTracksterH;
+  iEvent.getByToken(recoTracksterTag_, recoTracksterH);
+  std::vector<ticl::Trackster>  recoNoseTracksters = *(recoTracksterH.product());;
+
   if(theCaloHitContainers.isValid()) {
    caloHits.insert(caloHits.end(), theCaloHitContainers->begin(), 
 		   theCaloHitContainers->end());
@@ -920,9 +1038,9 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
    const HFRecHitCollection Hithf = *(hf_hits.product());
 
    /*
-   cout << "------------------------------------------------" << endl; 
+   cout << "------------------------------------------------" << endl;
    cout << "-----------------  Handles done ----------------" << endl;
-   cout << "------------------------------------------------" << endl; 
+   cout << "------------------------------------------------" << endl;
    */   
 
    //   std::vector<CaloParticle> clPos;
@@ -961,7 +1079,7 @@ GenAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
      hRecoClusterEta->Fill(cl.eta());
    }
 
-   if(runSingle) getSingle(genParticles, caloParticles, recoNoseClusters, digiNose, noseRecHits, caloHits, Hithf, geom, geoHcal );
+   if(runSingle) getSingle(genParticles, caloParticles, recoNoseTracksters, recoNoseClusters, digiNose, noseRecHits, caloHits, Hithf, geom, geoHcal );
 
    return;
    
