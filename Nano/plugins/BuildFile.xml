@@ -1,0 +1,11 @@
+<use name="DataFormats/NanoAOD"/>
+<use name="IOPool/Provenance"/>
+####
+<use name="FWCore/Framework"/>
+<use name="FWCore/ParameterSet"/>
+<use name="FWCore/PluginManager"/>
+<use name="FWCore/ServiceRegistry"/>
+<use name="FWCore/Utilities"/>
+<use name="CommonTools/Utils"/> 
+
+<flags EDM_PLUGIN="1"/>
