@@ -15,15 +15,15 @@ hfnoseRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
     )
 )
 
-#hgcEERecHitsPositionTable = cms.EDProducer("HGCRecHitPositionFromDetIDTableProducer",
-#    src = hgcEERecHitsTable.src,
-#    cut = hgcEERecHitsTable.cut, 
-#    name = hgcEERecHitsTable.name,
-#    doc  = hgcEERecHitsTable.doc,
-#)
+hfnoseRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionFromDetIDTableProducer",
+    src = hfnoseRecHitsTable.src,
+    cut = hfnoseRecHitsTable.cut, 
+    name = hfnoseRecHitsTable.name,
+    doc  = hfnoseRecHitsTable.doc,
+)
 
 hfnoseRecHitsSequence = cms.Sequence(
     hfnoseRecHitsTable
-#+hgcEERecHitsPositionTable
+    +hfnoseRecHitsPositionTable
 )
 

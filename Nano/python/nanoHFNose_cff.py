@@ -8,6 +8,7 @@ from PhysicsTools.NanoAOD.genVertex_cff import *
 ###
 from hfnoseRecHits_cff import *
 from caloParticles_cff import *
+from layerClusters_cff import *
 
 nanoMetadata = cms.EDProducer("UniqueStringProducer",
     strings = cms.PSet(
@@ -19,7 +20,8 @@ genParticleTable.src = "genParticles"
 genParticleTable.variables = cms.PSet(genParticleTable.variables,
     charge = CandVars.charge)
 
-nanoHFNoseSequence = cms.Sequence(nanoMetadata+genVertexTables+genParticleTable+
-                                  caloParticleTable+
-                                  hfnoseRecHitsSequence
+nanoHFNoseSequence = cms.Sequence(nanoMetadata+genVertexTables+genParticleTable
+                                  +caloParticleTable
+                                  +hfnoseRecHitsSequence
+                                  +hfnoseLayerClusterSequence
 )
