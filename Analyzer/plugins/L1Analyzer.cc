@@ -85,7 +85,10 @@ using namespace std;
 #include "DataFormats/L1THGCal/interface/HGCalMulticluster.h"
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerTools.h"
 #include "L1Trigger/L1THGCal/interface/HGCalTriggerGeometryBase.h"
+#include "DataFormats/L1THGCal/interface/HGCalTower.h"
 
+//
+#include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 
 #include "TH1F.h"
 #include "TH2F.h"
@@ -122,10 +125,16 @@ private:
   virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
 
-  void analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+  double analyze2Dcl(const l1t::HGCalClusterBxCollection& L12dNose,
+		     const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
-  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+  double analyze3Dcl(const l1t::HGCalMulticlusterBxCollection& L13dNose,
+		     const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
+  double analyzeTowers(const l1t::HGCalTowerBxCollection & towers,
+		       const math::XYZTLorentzVector & initialP4 , const double & jetE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
+
+  void getSingle(edm::Handle<reco::GenParticleCollection> genParticles, /*std::vector<CaloParticle> caloParticles,*/ const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const l1t::HGCalTowerBxCollection & towers, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal);
 
   // ----------member data ---------------------------
   //  void ClearVariables();
@@ -137,89 +146,39 @@ private:
   bool verbose = false;
 
   edm::EDGetTokenT<reco::GenParticleCollection> genParticlesTag_;
+  edm::EDGetTokenT<std::vector<CaloParticle>> caloParticleTag_;
 
-  edm::EDGetToken clusters_token_, multiclusters_token_;
+  edm::EDGetToken clusters_token_, multiclusters_token_, towers_token_;
   HGCalTriggerTools triggerTools_;
+  int pdgId_=22; // default do photons
 
-  //https://github.com/cms-sw/cmssw/blob/master/L1Trigger/L1THGCalUtilities/plugins/ntuples/HGCalTriggerNtupleHGCClusters.cc
+  TH1F *hResponse;
+  TH1F *hResponse2D;
+  TH1F *hResponse3D;
+  TH1F *hResponseTow;
+  TH2F *hResponseE;
+  TH2F *hResponseEta;
 
-  /*
-  edm::EDGetTokenT<reco::GenJetCollection> genJetsTag_;
-  edm::EDGetTokenT<edm::PCaloHitContainer> simHitTag_;
-  edm::EDGetTokenT<edm::PCaloHitContainer> simHcalTag_;
-  edm::EDGetTokenT<HGCalDigiCollection> digiNose_;
-  edm::EDGetTokenT<HGCRecHitCollection> recHitNose_;
-  
-  edm::EDGetTokenT<HFRecHitCollection> tok_hf_;
-
-  TH1F *hLepEta;
-  TH1F *hLepPt;
-  TH1F *hLepCharge;
-
-  TH1F *hJetEta;
-  TH1F *hJetEtaLarge;
-
-  TH1F *hJetDeltaRap;
-  TH1F *hJetDiMass;
-
-  TH1F *hJetPtMin;
-  TH1F *hJetPtMax;
-
-  TH1F *hEnergyE;
-  TH1F *hEnergyH;
-  TH1F *hEnergy;
-  TH1F *hEnergyFrac;
-
-  TH1F *hParticleTime;
-  TH1F *hDigiTime;
-  TH1F *hDigiTimeL1;
-  TH1F *hDigiTimeL2;
-  TH1F *hDigiTimeL3;
-  TH1F *hDigiTimeL4;
-  TH1F *hDigiTimeL5;
-  TH1F *hDigiTimeL6;
-  TH1F *hDigiTimeL7;
-  TH1F *hDigiTimeL8;
-  TH1F *hDigiCharge;
-  TH2F *hDigiTimeCharge;
-
-  TH1F *hEnergy1;
-  TH1F *hEnergy2;
-  TH1F *hEnergy3;
-  TH1F *hEnergy4;
-  TH1F *hEnergy5;
-  TH1F *hEnergy6;
-  TH1F *hEnergy7;
-  TH1F *hEnergy8;
-  TH1F *hEnergyHF;
-
-  TH2F *hEnergyPosition;
-  TH2F *hEnergyEtaPhi;
-
-  TH1F *hNmips;
-  TH1F *hEnergyMIPS;
-  TH1F *hJetResponseHF;
-  TH1F *hJetResponseNose;
-
-  TH1F *hJetResponseNoseEE;
-  TH1F *hJetResponseNoseEH;
-
-  TH2F *hJetResponseHFEta;
-  TH2F *hJetResponseNoseEta;
-  */
-
-  TH2F *hClusterLayerRho;
   TH2F *hClusterEtaPhi;
   TH1F *hClusterEnergy;
   TH1F *hClusterLayer;
-  TH1F *hCluster3DSize;
+  TH1F *hClusterSize;
+
+  TH2F *h3DClusterEtaPhi;
+  TH1F *h3DClusterEnergy;
+  TH1F *h3DClusterLayer;
+  TH1F *h3DClusterSize;
+
+  TH1F *hTowClusterEnergy;
+
+  TH2F *hClusterLayerRho;
   TH2F *hRecHitPositionNull;
 
-  TH1F *hMaxClResponse;
+  TH1F *hMax2DClResponse;
+  TH1F *hMax3DClResponse;
 
-  TH1F *hResponse;
-  TH2F *hResponseE;
-  TH2F *hResponseEta;
+  TH1F *hEemTow;
+  TH1F *hEhadTow;
 
   TH1F * hClSigmaEtaEtaTot;
   TH1F * hClSigmaEtaEtaMax;
@@ -230,7 +189,7 @@ private:
   TH1F * hClZZ;
   TH1F * hHoverE;
 
-  double coneSize=0.4;
+  double coneSize=0.1;
   //  double coneSize=0.4; // good for jets
   double hadWeight=1.;
   bool doSingle=false;
@@ -249,15 +208,53 @@ private:
 // static data member definitions
 //
 
+double L1Analyzer::analyze2Dcl(const l1t::HGCalClusterBxCollection& L12dNose,
+			     const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
 
-void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+  TLorentzVector EsumVectorL1Nose(0.,0.,0.,0.);
+  TLorentzVector EsumVectorL1HF(0.,0.,0.,0.);
+  double maxECLuster = 0;
+
+  for (auto const& cl : L12dNose) {
+
+    double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
+
+    if ( thisDeltaR1 < coneSize ) {
+
+      if(cl.energy()>maxECLuster) maxECLuster=cl.energy();
+
+      hClusterEnergy->Fill(cl.energy());
+      hClusterEtaPhi->Fill(cl.eta(),cl.phi());
+
+      double theta = 2 * atan(exp(cl.eta()));
+      double phi = cl.phi();
+      double px = sin(theta)*cos(phi);
+      double py = sin(theta)*sin(phi);
+      double pz = cos(theta);
+      TLorentzVector constituentbase(px,py,pz,1);
+      EsumVectorL1Nose += cl.energy()*constituentbase;
+
+    }
+  }
+
+  hMax2DClResponse->Fill(maxECLuster/trueE);
+  hResponse2D->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+
+  //  if(maxECLuster/trueE<0.01) hRecHitPositionNull->Fill(initialP4.eta(),initialP4.phi());
+
+  return EsumVectorL1Nose.Energy();
+
+}
+
+
+double L1Analyzer::analyze3Dcl(const l1t::HGCalMulticlusterBxCollection& L13dNose,
+			     const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
 
   TLorentzVector EsumVectorL1Nose(0.,0.,0.,0.);
   TLorentzVector EsumVectorL1HF(0.,0.,0.,0.);
   
   double maxECLuster = 0;
 
-  //  for (auto const& cl : L12dNose) {
   for (auto const& cl : L13dNose) {
 
     double   thisDeltaR1 = ::deltaR(cl.eta(), cl.phi() , initialP4.eta(), initialP4.phi());
@@ -270,17 +267,17 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
 
       if(cl.energy()>maxECLuster) maxECLuster=cl.energy();
 
-      hClusterEnergy->Fill(cl.energy());
-      hClusterEtaPhi->Fill(cl.eta(),cl.phi());
+      h3DClusterEnergy->Fill(cl.energy());
+      h3DClusterEtaPhi->Fill(cl.eta(),cl.phi());
 
-      //      if(cl.energy() > 5 ) {
+      if(cl.energy() > 5 ) {
 	//      unsigned layer = 9999.;
       unsigned layer = triggerTools_.layerWithOffset(cl.detId());
-      hClusterLayer->Fill(layer);
-      hCluster3DSize->Fill(cl.constituents().size());
+      h3DClusterLayer->Fill(layer);
+      h3DClusterSize->Fill(cl.constituents().size());
 
       //	cout << " constituents " << cl.constituents().size() << " layer = " << layer << " eta = " << cl.eta() << " phi = " << cl.phi() << " cl.energy() = " << cl.energy() << " trueEnergy = " << initialP4.energy() << endl;
-      //      }
+      }
 
       hClSigmaEtaEtaTot->Fill(cl.sigmaEtaEtaTot());
       hClSigmaEtaEtaMax->Fill(cl.sigmaEtaEtaMax());
@@ -314,22 +311,64 @@ void L1Analyzer::analyzeL1(const l1t::HGCalClusterBxCollection& L12dNose, const 
   */
 
 
-  hMaxClResponse->Fill(maxECLuster/trueE);
-  hResponse->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+  hMax3DClResponse->Fill(maxECLuster/trueE);
+  hResponse3D->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
 
-  if(maxECLuster/trueE<0.01) hRecHitPositionNull->Fill(initialP4.eta(),initialP4.phi());
+  return EsumVectorL1Nose.Energy();
 
 }
 
-void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+double L1Analyzer::analyzeTowers(const l1t::HGCalTowerBxCollection & towers,
+				 const math::XYZTLorentzVector & initialP4, const double & trueE, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
+
+  TLorentzVector EsumVectorL1Nose(0.,0.,0.,0.);
+  TLorentzVector EsumVectorL1HF(0.,0.,0.,0.);
+
+  TLorentzVector EsumVectorL1NoseEM(0.,0.,0.,0.);
+  TLorentzVector EsumVectorL1NoseHAD(0.,0.,0.,0.);
+
+  for (auto const& tow : towers) {
+
+    double   thisDeltaR1 = ::deltaR(tow.eta(), tow.phi() , initialP4.eta(), initialP4.phi());
+
+    if ( thisDeltaR1 < coneSize ) {
+
+      hTowClusterEnergy->Fill(tow.energy());
+
+      double theta = 2 * atan(exp(tow.eta()));
+      double phi = tow.phi();
+      double px = sin(theta)*cos(phi);
+      double py = sin(theta)*sin(phi);
+      double pz = cos(theta);
+      TLorentzVector constituentbase(px,py,pz,1);
+      EsumVectorL1Nose += tow.energy()*constituentbase;
+      EsumVectorL1NoseEM += tow.etEm()*constituentbase;
+      EsumVectorL1NoseHAD += tow.etHad()*constituentbase;
+
+    } 
+  }
+
+  hResponseTow->Fill((EsumVectorL1Nose+EsumVectorL1HF).Energy()/trueE);
+  hEemTow->Fill(EsumVectorL1NoseEM.Energy());
+  hEhadTow->Fill(EsumVectorL1NoseHAD.Energy());
+
+  //  if(maxECLuster/trueE<0.01) hRecHitPositionNull->Fill(initialP4.eta(),initialP4.phi());
+
+  return EsumVectorL1Nose.Energy();
+
+}
+
+
+void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles, /*std::vector<CaloParticle> caloParticles,*/ const l1t::HGCalClusterBxCollection& L12dNose, const l1t::HGCalMulticlusterBxCollection& L13dNose, const l1t::HGCalTowerBxCollection & towers, const HGCalGeometry* geom, const CaloSubdetectorGeometry *geomHcal) {
 
   doSingle=true;
 
+  if(true) {
   for(reco::GenParticleCollection::const_iterator genpart = genParticles->begin(); genpart != genParticles->end(); ++genpart){
     
     // 22 photon, 130 k0L , 211 pi
     //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==130 );
-    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==22 );
+    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==pdgId_);
     //    bool isPhoton = ( genpart->isPromptFinalState() and abs(genpart->pdgId())==211 );
     if (!isPhoton) continue;
     
@@ -346,51 +385,31 @@ void L1Analyzer::getSingle(edm::Handle<reco::GenParticleCollection> genParticles
    hGenParticlePt->Fill(genpart->pt());
    hGenParticleE->Fill(genpart->energy());
    
-   analyzeL1(L12dNose,L13dNose,genpart->p4(), genpart->energy(), geom, geomHcal);
+   //   analyzeL1(L12dNose,L13dNose,towers, genpart->p4(), genpart->energy(), geom, geomHcal);
+   double E2cl = analyze2Dcl(L12dNose, genpart->p4(), genpart->energy(), geom, geomHcal);
+   double E3cl = analyze3Dcl(L13dNose, genpart->p4(), genpart->energy(), geom, geomHcal);
+   double Etow = analyzeTowers(towers, genpart->p4(), genpart->energy(), geom, geomHcal);
    
- }
-
+  }
+  }
 }
 
 //
 // constructors and destructor
 //
 L1Analyzer::L1Analyzer(const edm::ParameterSet& iConfig)
-// :
+  : pdgId_(iConfig.getUntrackedParameter<int>("pdgId"))
   //  tracksToken_(consumes<TrackCollection>(iConfig.getUntrackedParameter<edm::InputTag>("tracks")))
-
 {
 
   usesResource("TFileService");  
   genParticlesTag_ = consumes<reco::GenParticleCollection>(iConfig.getUntrackedParameter<edm::InputTag> ("GenParticleTag", edm::InputTag("genParticles")));
+  //  caloParticleTag_ = mayConsume<std::vector<CaloParticle>>(edm::InputTag("mix","MergedCaloTruth"));
 
   clusters_token_ = consumes<l1t::HGCalClusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Clusters", edm::InputTag("hgcalBackEndLayer1ProducerHFNose:HGCalBackendLayer1Processor2DClustering")));
   multiclusters_token_ = consumes<l1t::HGCalMulticlusterBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Multiclusters", edm::InputTag("hgcalBackEndLayer2ProducerHFNose:HGCalBackendLayer2Processor3DClustering")));
 
-  /*                                                                                                                                                                                 
-Type                                  Module                      Label             Process
-----------------------------------------------------------------------------------------------                                                                                       
-  BXVector<l1t::HGCalCluster>           "hgcalBackEndLayer1Producer"   "HGCalBackendLayer1Processor2DClustering"   "DIGI"
-  BXVector<l1t::HGCalMulticluster>      "hgcalBackEndLayer2Producer"   "HGCalBackendLayer2Processor3DClustering"   "DIGI"
-  BXVector<l1t::HGCalTower>             "hgcalTowerProducer"        "HGCalTowerProcessor"   "DIGI"
-
-  edm::SortedCollection<HGCRecHit,edm::StrictWeakOrdering<HGCRecHit> >    "HGCalRecHit"               "HGCHFNoseRecHits"   "RECO"
-  */
-
-
-  /*
-  genJetsTag_ = consumes<reco::GenJetCollection>(iConfig.getUntrackedParameter<edm::InputTag> ("GenJetTag", edm::InputTag("ak4GenJets")));
-
-  simHitTag_ = mayConsume<edm::PCaloHitContainer>(edm::InputTag("g4SimHits","HFNoseHits"));
-  //  simHcalTag_ = mayConsume<edm::PCaloHitContainer>(edm::InputTag("g4SimHits","HcalHits"));
-  simHcalTag_ = consumes<edm::PCaloHitContainer>(edm::InputTag("g4SimHits","HcalHits"));
-  tok_hf_ = consumes<HFRecHitCollection>(iConfig.getUntrackedParameter<string>("HFRecHits","hfreco"));
-
-  //  digiNose_ = consumes<HGCalDigiCollection>(iConfig.getParameter<edm::InputTag>("simHFNoseUnsuppressedDigis","HFNose"));
-  digiNose_ = consumes<HGCalDigiCollection>(iConfig.getUntrackedParameter<edm::InputTag>("DIGITAG",edm::InputTag("simHFNoseUnsuppressedDigis:HFNose")));
-
-  recHitNose_ = consumes<HGCRecHitCollection>(iConfig.getUntrackedParameter<edm::InputTag>("REChitTAG",edm::InputTag("HGCalRecHit:HGCHFNoseRecHits")));
-  */
+  towers_token_ = consumes<l1t::HGCalTowerBxCollection>(iConfig.getUntrackedParameter<edm::InputTag>("Towers", edm::InputTag("hgcalTowerProducerHFNose:HGCalTowerProcessor")));
 
   /*
     cout << "---------------------------------------------------" << endl; 
@@ -403,15 +422,28 @@ Type                                  Module                      Label         
   hGenParticlePt = FileService->make<TH1F>("hGenParticlePt","hGenParticlePt", 100, 0. , 100.);
   hGenParticleE = FileService->make<TH1F>("hGenParticleE","hGenParticleE", 100, 0. , 1000.);
 
-  hClusterEtaPhi = FileService->make<TH2F>("hClusterEtaPhi","hClusterEtaPhi", 100, -5., 5., 628, -3.14, 3.14);
+  //  hClusterLayerRho = FileService->make<TH2F>("hClusterLayerRho","hClusterLayerRho", 10, 0. , 10., 150, 0, 150);
   hClusterEnergy = FileService->make<TH1F>("hClusterEnergy","hClusterEnergy", 100, 0. , 100.);
+  hClusterEtaPhi = FileService->make<TH2F>("hClusterEtaPhi","hClusterEtaPhi", 100, -5., 5., 628, -3.14, 3.14);
   hClusterLayer = FileService->make<TH1F>("hClusterLayer","hClusterLayer", 10, 0. , 10.);
-  hClusterLayerRho = FileService->make<TH2F>("hClusterLayerRho","hClusterLayerRho", 10, 0. , 10., 150, 0, 150);
-  hCluster3DSize = FileService->make<TH1F>("hClusterConstituents","hClusterConstituents", 10, 0. , 10.);
+  hClusterSize = FileService->make<TH1F>("hClusterConstituents","hClusterConstituents", 10, 0. , 10.);
+
+  h3DClusterEnergy = FileService->make<TH1F>("h3DClusterEnergy","h3DClusterEnergy", 100, 0. , 100.);
+  h3DClusterEtaPhi = FileService->make<TH2F>("h3DClusterEtaPhi","h3DClusterEtaPhi", 100, -5., 5., 628, -3.14, 3.14);
+  h3DClusterLayer = FileService->make<TH1F>("h3DClusterLayer","h3DClusterLayer", 10, 0. , 10.);
+  h3DClusterSize = FileService->make<TH1F>("h3DClusterConstituents","h3DClusterConstituents", 10, 0. , 10.);
+
+  hTowClusterEnergy = FileService->make<TH1F>("hTowClusterEnergy","hTowClusterEnergy", 100, 0. , 100.);
+  hEemTow = FileService->make<TH1F>("hTowEmEnergy","hTowEmEnergy", 100, 0. , 100.);
+  hEhadTow = FileService->make<TH1F>("hTowHadEnergy","hTowHadEnergy", 100, 0. , 100.);
 
   hRecHitPositionNull = FileService->make<TH2F>("hRecHitPositionNull","hRecHitPositionNull", 100, -5., 5., 628, -3.14, 3.14);
   hResponse = FileService->make<TH1F>("hResponse","hResponse", 100, 0. , 2.);
-  hMaxClResponse = FileService->make<TH1F>("hMaxClResponse","hMaxClResponse", 100, 0. , 2.);
+  hResponse2D = FileService->make<TH1F>("hResponse2D","hResponse2D", 100, 0. , 2.);
+  hResponse3D = FileService->make<TH1F>("hResponse3D","hResponse3D", 100, 0. , 2.);
+  hResponseTow = FileService->make<TH1F>("hResponseTow","hResponseTow", 100, 0. , 2.);
+  hMax2DClResponse = FileService->make<TH1F>("hMax2DClResponse","hMax2DClResponse", 100, 0. , 2.);
+  hMax3DClResponse = FileService->make<TH1F>("hMax3DClResponse","hMax3DClResponse", 100, 0. , 2.);
 
   hClSigmaEtaEtaTot = FileService->make<TH1F>("hClSigmaEtaEtaTot","hClSigmaEtaEtaTot", 100, 0. , 0.05);
   hClSigmaEtaEtaMax = FileService->make<TH1F>("hClSigmaEtaEtaMax","hClSigmaiEtaiEtaMax", 100, 0. , 0.05);
@@ -458,6 +490,12 @@ L1Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<reco::GenParticleCollection> genParticles;
   iEvent.getByToken(genParticlesTag_, genParticles);
 
+  /*
+  edm::Handle<std::vector<CaloParticle>> caloParticlesH;
+  iEvent.getByToken(caloParticleTag_, caloParticlesH);
+  std::vector<CaloParticle>  caloParticles = *(caloParticlesH.product()); 
+  */
+
   edm::Handle<l1t::HGCalClusterBxCollection> L12dNose;
   iEvent.getByToken(clusters_token_, L12dNose);
   const l1t::HGCalClusterBxCollection noseL12d = *(L12dNose.product());
@@ -474,13 +512,25 @@ L1Analyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   */
 
+  edm::Handle<l1t::HGCalTowerBxCollection> towers_h;
+  iEvent.getByToken(towers_token_, towers_h);
+  const l1t::HGCalTowerBxCollection& towers = *towers_h;
+
+  /*
+  for (auto tower_itr = towers.begin(0); tower_itr != towers.end(0); tower_itr++) {
+    if(tower_itr->pt() > 0.5) std::cout << " pt = " << tower_itr->pt() << " eta " << tower_itr->eta() << " energy = " << tower_itr->energy() << " etEm = " << tower_itr->etEm() << " etHad = " << tower_itr->etHad()  << std::endl;
+  }
+  */
+
+
+
    /*
    cout << "------------------------------------------------" << endl; 
    cout << "-----------------  Handles done ----------------" << endl;
    cout << "------------------------------------------------" << endl; 
    */   
 
-  if(runSingle) getSingle(genParticles, noseL12d, noseL13d, geom, geoHcal );
+  if(runSingle) getSingle(genParticles, /*caloParticles,*/ noseL12d, noseL13d, towers, geom, geoHcal );
 
    return;
 
