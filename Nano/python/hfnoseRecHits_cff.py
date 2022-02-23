@@ -12,6 +12,9 @@ hfnoseRecHitsTable = cms.EDProducer("SimpleCaloRecHitFlatTableProducer",
         detId = Var('detid().rawId()', 'int', precision=-1, doc='detId'),
         energy = Var('energy', 'float', precision=14, doc='energy'),
         time = Var('time', 'float', precision=14, doc='hit time'),
+#        eta  = Var("eta",  float, precision=12),
+#        phi = Var("phi", float, precision=12),
+
     )
 )
 
@@ -22,8 +25,8 @@ hfnoseRecHitsPositionTable = cms.EDProducer("HGCRecHitPositionFromDetIDTableProd
     doc  = hfnoseRecHitsTable.doc,
 )
 
-hfnoseRecHitsSequence = cms.Sequence(
+hfnoseRecHitsTask = cms.Task(
     hfnoseRecHitsTable
-    +hfnoseRecHitsPositionTable
+#    ,hfnoseRecHitsPositionTable
 )
 

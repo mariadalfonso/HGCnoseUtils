@@ -27,7 +27,8 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        "file:/eos/user/d/dalfonso/HGCnose/11_3_ticl/step3_PionPt20_D60.root"
+#        "file:/eos/user/d/dalfonso/HGCnose/11_3_ticl/step3_PionPt20_D60.root"
+        "file:$CMSSW_BASE/src/step3_ttbar10ev.root"
     )
 )
 
@@ -52,7 +53,7 @@ process.output = cms.OutputModule("NanoAODOutputModule",
 ####
 process.load("HGCnoseUtils.Nano.nanoHFNose_cff")
 
-process.hgc = cms.Path(process.nanoHFNoseSequence)
+process.hgc = cms.Path(process.nanoHFNoseTask)
 
 process.finalize = cms.EndPath(process.output)
 

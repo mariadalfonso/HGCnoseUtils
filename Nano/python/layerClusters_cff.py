@@ -16,6 +16,6 @@ hfnoseLayerClusterTable = cms.EDProducer("SimpleCaloClusterFlatTableProducer",
     )
 )
 
-hfnoseLayerClusterSequence = cms.Sequence(
+hfnoseLayerClusterTask = cms.Task(
     hfnoseLayerClusterTable
 )
