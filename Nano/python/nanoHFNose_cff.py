@@ -9,6 +9,9 @@ from PhysicsTools.NanoAOD.genVertex_cff import *
 from HGCnoseUtils.Nano.hfnoseRecHits_cff import *
 from HGCnoseUtils.Nano.caloParticles_cff import *
 from HGCnoseUtils.Nano.layerClusters_cff import *
+from HGCnoseUtils.Nano.hfnoseTracksters_cff import *
+###
+from HGCnoseUtils.Nano.hfRecHits_cff import *
 
 nanoMetadata = cms.EDProducer("UniqueStringProducer",
     strings = cms.PSet(
@@ -29,4 +32,6 @@ nanoHFNoseTask = cms.Task(nanoMetadata,genVertexTablesTask,genParticleTablesTask
                           #                                  +hfnoseAssociatorsSequence
                           ,hfnoseRecHitsTask
                           ,hfnoseLayerClusterTask
+                          ,hfnoseTrackstersTask
+                          ,hfRecHitsTask
 )
