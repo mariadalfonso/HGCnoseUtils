@@ -12,6 +12,9 @@ hfRecHitsTable = cms.EDProducer("SimpleHFRecHitFlatTableProducer",
         detId = Var('detid().rawId()', 'int', precision=-1, doc='detId'),
         energy = Var('energy', 'float', precision=14, doc='energy'),
         time = Var('time', 'float', precision=14, doc='hit time'),
+        ieta = Var('id().ieta()', 'int', precision=-1, doc='ieta'),
+        iphi = Var('id().iphi()', 'int', precision=-1, doc='iphi'),
+        depth = Var('id().depth()', 'int', precision=-1, doc='depth'),
     )
 )
 
